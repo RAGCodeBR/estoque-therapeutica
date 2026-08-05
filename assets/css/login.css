@@ -1,0 +1,24 @@
+:root {
+    --fundo: #fff8f5;
+    --branco: #ffffff;
+    --salmão: #e87861;
+    --salmão-escuro: #c95d49;
+    --salmão-claro: #fff0ea;
+    --marrom: #3f302d;
+    --marrom-claro: #806e68;
+    --borda: #ecd7cf;
+    --verde: #3d8a61;
+    --verde-claro: #e8f5ed;
+    --amarelo: #ad721e;
+    --amarelo-claro: #fff5dc;
+    --vermelho: #aa4d3c;
+    --sombra: 0 18px 45px rgba(99, 61, 51, 0.12);
+}
+
+body {
+    background-color: var(--salmão);
+}
+
+.card-login {
+    
+}
