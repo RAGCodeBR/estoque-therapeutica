@@ -1,6 +1,6 @@
 # Estoque Therapeutica
 
-Protótipo de controle de estoque da matriz da Therapeutica, criado com HTML, CSS e JavaScript puro.
+Protótipo de controle do Centro de Distribuição (CD) da Therapeutica, criado com HTML, CSS e JavaScript puro.
 
 ## O que funciona nesta versão
 
@@ -9,11 +9,11 @@ Protótipo de controle de estoque da matriz da Therapeutica, criado com HTML, CS
 - Entrada e saída de produtos com bloqueio de estoque negativo;
 - Alertas automáticos de estoque baixo;
 - Histórico de movimentações com saldo antes e depois;
-- Portais de demonstração para Blumenau, Lucas e Sinop, além da visão da Matriz;
+- Portais de demonstração para Matriz, Blumenau, Lucas e Sinop, além da visão do CD;
 - Estoque individual por filial;
 - Pedidos em lista: uma filial pode enviar vários produtos na mesma solicitação, com estoque atual obrigatório para cada item;
 - Aprovação, recusa ou espera de compra para pedidos;
-- Transferência aprovada baixa a matriz e atualiza a quantidade conhecida da filial;
+- Transferência aprovada baixa o estoque do CD e atualiza a quantidade conhecida da filial;
 - Backup e restauração dos dados em arquivo JSON.
 
 ## Como abrir
@@ -26,7 +26,7 @@ Os dados ficam no navegador atual usando `localStorage`. O seletor de “Visuali
 
 Na próxima fase, o frontend será conectado ao Supabase para:
 
-- autenticação de matriz e filiais;
+- autenticação do CD e das filiais;
 - banco PostgreSQL;
 - políticas de segurança por usuário/filial;
 - dados compartilhados entre dispositivos;

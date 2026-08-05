@@ -1,8 +1,11 @@
-const STORAGE_KEY = "therapeutica-estoque-v3";
+const STORAGE_KEY = "therapeutica-estoque-v4";
 const LEGACY_PRODUCTS_KEY = "produtos-therapeutica";
 const LEGACY_MOVEMENTS_KEY = "movimentacoes-therapeutica";
+const LEGACY_STORAGE_KEYS = ["therapeutica-estoque-v3"];
+const CENTRO_DISTRIBUICAO_ID = "cd";
 
 const FILIAIS_PADRAO = [
+    { id: "matriz", nome: "Matriz", cidade: "Sede administrativa" },
     { id: "blumenau", nome: "Blumenau", cidade: "Blumenau, SC" },
     { id: "lucas", nome: "Lucas", cidade: "Lucas do Rio Verde, MT" },
     { id: "sinop", nome: "Sinop", cidade: "Sinop, MT" }
@@ -30,6 +33,7 @@ const elementos = {
     menuMatriz: document.querySelector("#menu-matriz"),
     menuFilial: document.querySelector("#menu-filial"),
     seletorPortal: document.querySelector("#seletor-portal"),
+    contextoPortal: document.querySelector("#contexto-portal"),
     tituloPagina: document.querySelector("#titulo-pagina"),
     toast: document.querySelector("#toast"),
     indicadorProdutos: document.querySelector("#indicador-produtos"),
@@ -117,7 +121,7 @@ const elementos = {
 let paginaAtual = "dashboard";
 let tipoMovimentacaoAtual = "entrada";
 let produtoSelecionadoMovimentacao = "";
-let portalAtual = "matriz";
+let portalAtual = CENTRO_DISTRIBUICAO_ID;
 let itensDoPedidoAtual = [];
 let temporizadorToast;
 let estado = carregarEstado();
@@ -146,7 +150,7 @@ function lerJSON(chave, valorPadrao) {
 
 function estadoPadrao() {
     return {
-        versao: 3,
+        versao: 4,
         produtos: [],
         movimentacoes: [],
         pedidos: [],
@@ -223,18 +227,18 @@ function criarEstadoDemo() {
     };
 
     return {
-        versao: 3,
+        versao: 4,
         produtos,
         movimentacoes: [
-            movimento("mov-001", "prod-001", "entrada", 120, 66, 186, "Compra mensal para recompor matriz.", "2026-07-21T10:10:00.000Z"),
+            movimento("mov-001", "prod-001", "entrada", 120, 66, 186, "Compra mensal para recompor o CD.", "2026-07-21T10:10:00.000Z"),
             movimento("mov-002", "prod-011", "entrada", 48, 48, 96, "Recebimento fornecedor Blumenpack.", "2026-07-21T11:20:00.000Z"),
-            movimento("mov-003", "prod-006", "saida", 12, 76, 64, "Separação para vitrine da matriz.", "2026-07-21T14:35:00.000Z"),
+            movimento("mov-003", "prod-006", "saida", 12, 76, 64, "Separação para uso interno do CD.", "2026-07-21T14:35:00.000Z"),
             movimento("mov-004", "prod-026", "saida", 14, 22, 8, "Uso interno e perdas registradas.", "2026-07-20T16:00:00.000Z"),
             movimento("mov-005", "prod-016", "entrada", 500, 240, 740, "Reposição de sacolas personalizadas.", "2026-07-19T09:45:00.000Z"),
             movimento("mov-006", "prod-003", "transferencia", 18, 96, 78, "Pedido aprovado e transferência registrada.", "2026-07-18T15:30:00.000Z", "blumenau", "ped-003"),
             movimento("mov-007", "prod-018", "transferencia", 140, 1120, 980, "Pedido aprovado e transferência registrada.", "2026-07-18T15:31:00.000Z", "blumenau", "ped-003"),
             movimento("mov-008", "prod-017", "transferencia", 80, 500, 420, "Pedido aprovado e transferência registrada.", "2026-07-17T10:05:00.000Z", "sinop", "ped-004"),
-            movimento("mov-009", "prod-024", "saida", 6, 42, 36, "Consumo administrativo da matriz.", "2026-07-16T13:00:00.000Z"),
+            movimento("mov-009", "prod-024", "saida", 6, 42, 36, "Consumo administrativo do CD.", "2026-07-16T13:00:00.000Z"),
             movimento("mov-010", "prod-029", "saida", 9, 28, 19, "Baixa por uso em atendimento.", "2026-07-15T17:25:00.000Z")
         ],
         pedidos: [
@@ -256,11 +260,11 @@ function criarEstadoDemo() {
                 id: "ped-002",
                 filialId: "lucas",
                 itens: [
-                    { produtoId: "prod-026", produtoNome: "Soro fisiológico 500ml", unidade: "Frasco", estoqueInformado: 1, quantidadeSolicitada: 28, observacao: "Matriz está com pouco saldo." },
+                    { produtoId: "prod-026", produtoNome: "Soro fisiológico 500ml", unidade: "Frasco", estoqueInformado: 1, quantidadeSolicitada: 28, observacao: "CD está com pouco saldo." },
                     { produtoId: "prod-014", produtoNome: "Máscara cirúrgica", unidade: "Caixa", estoqueInformado: 5, quantidadeSolicitada: 20, observacao: "" }
                 ],
                 observacao: "Priorizar assim que houver compra.",
-                observacaoMatriz: "Aguardando compra. Chegada prevista na matriz: 24/07/2026.",
+                observacaoMatriz: "Aguardando compra. Chegada prevista no CD: 24/07/2026.",
                 situacao: "aguardando_compra",
                 compraPrevista: "2026-07-24",
                 compraRecebidaEm: null,
@@ -444,6 +448,7 @@ function normalizarEstado(dados) {
     base.estoqueFiliais = fonte.estoqueFiliais && typeof fonte.estoqueFiliais === "object"
         ? fonte.estoqueFiliais
         : {};
+    base.demoDesativado = fonte.demoDesativado === true;
     base.atualizadoEm = fonte.atualizadoEm ?? new Date().toISOString();
 
     return base;
@@ -466,6 +471,13 @@ function carregarEstado() {
         }
 
         return normalizado;
+    }
+
+    const estadoAnterior = LEGACY_STORAGE_KEYS.map((chave) => lerJSON(chave, null)).find(Boolean);
+    if (estadoAnterior) {
+        const migrado = normalizarEstado(estadoAnterior);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrado));
+        return migrado;
     }
 
     const produtosAntigos = lerJSON(LEGACY_PRODUCTS_KEY, []);
@@ -536,7 +548,7 @@ function buscarFilial(id) {
 }
 
 function estaNoPortalFilial() {
-    return portalAtual !== "matriz";
+    return portalAtual !== CENTRO_DISTRIBUICAO_ID;
 }
 
 function filialAtual() {
@@ -626,8 +638,8 @@ function atualizarPaginaMovimentacao() {
     elementos.movimentoSubtitulo.textContent = entrada ? "Recebimento de produtos" : "Consumo, perda ou transferência";
     elementos.movimentoTitulo.textContent = entrada ? "Registrar entrada" : "Registrar saída";
     elementos.movimentoDescricao.textContent = entrada
-        ? "Registre produtos que chegaram à matriz, incluindo compras e reposições."
-        : "Registre itens consumidos na matriz ou enviados para outros destinos.";
+        ? "Registre produtos que chegaram ao Centro de Distribuição, incluindo compras e reposições."
+        : "Registre itens consumidos no Centro de Distribuição ou enviados para as filiais.";
     elementos.botaoConfirmarMovimento.textContent = entrada ? "Confirmar entrada" : "Confirmar saída";
 }
 
@@ -658,6 +670,10 @@ function navegar(pagina, opcoes = {}) {
 
     elementos.menuMatriz.hidden = estaNoPortalFilial();
     elementos.menuFilial.hidden = !estaNoPortalFilial();
+    const filial = filialAtual();
+    elementos.contextoPortal.textContent = filial
+        ? `Therapeutica Pharmacia · Filial ${filial.nome}`
+        : "Therapeutica Pharmacia · Centro de Distribuição";
 
     elementos.navegacao.forEach((item) => {
         const correspondePagina = item.dataset.pagina === paginaAtual;
@@ -829,7 +845,7 @@ function atualizarInformacaoProdutoMovimento() {
         return;
     }
 
-    elementos.infoProdutoMovimento.innerHTML = `Estoque atual na matriz: <strong>${formatarNumero(produto.quantidade)} ${escaparHTML(produto.unidade)}</strong>. Estoque mínimo: <strong>${formatarNumero(produto.estoqueMinimo)} ${escaparHTML(produto.unidade)}</strong>.`;
+    elementos.infoProdutoMovimento.innerHTML = `Estoque atual no CD: <strong>${formatarNumero(produto.quantidade)} ${escaparHTML(produto.unidade)}</strong>. Estoque mínimo: <strong>${formatarNumero(produto.estoqueMinimo)} ${escaparHTML(produto.unidade)}</strong>.`;
 }
 
 function renderizarEstoqueBaixo() {
@@ -856,7 +872,7 @@ function renderizarPedidos() {
         ? pedidos.map((pedido) => {
             const filial = buscarFilial(pedido.filialId);
             const itens = itensDoPedido(pedido);
-            const compra = pedido.compraPrevista ? `Chegada na matriz: ${formatarDataSimples(pedido.compraPrevista)}` : "";
+            const compra = pedido.compraPrevista ? `Chegada no CD: ${formatarDataSimples(pedido.compraPrevista)}` : "";
             const entrega = pedido.entregaPrevista ? `Entrega prevista: ${formatarDataSimples(pedido.entregaPrevista)}` : "";
             const listaItens = itens.map((item) => `
                 <div class="item-pedido-resumo">
@@ -1016,10 +1032,10 @@ function renderizarPortalFilial() {
                             </div>
                         `).join("")}
                     </div>
-                    ${compra ? `<p><strong>Chegada prevista na matriz:</strong> ${escaparHTML(compra)}</p>` : ""}
+                    ${compra ? `<p><strong>Chegada prevista no CD:</strong> ${escaparHTML(compra)}</p>` : ""}
                     ${entrega ? `<p><strong>Entrega prevista:</strong> ${escaparHTML(entrega)}</p>` : ""}
                     ${pedido.recebidoEm ? `<p><strong>Recebido em:</strong> ${formatarData(pedido.recebidoEm)}</p>` : ""}
-                    ${pedido.observacaoMatriz ? `<p><strong>Resposta da matriz:</strong> ${escaparHTML(pedido.observacaoMatriz)}</p>` : ""}
+                    ${pedido.observacaoMatriz ? `<p><strong>Resposta do CD:</strong> ${escaparHTML(pedido.observacaoMatriz)}</p>` : ""}
                     ${pedido.situacao === "em_transito" ? `<button type="button" class="botao-principal" data-acao="confirmar-recebimento" data-pedido-id="${pedido.id}">Confirmar recebimento</button>` : ""}
                 </article>
             `;
@@ -1096,7 +1112,7 @@ function abrirModalPedido(filialId = "") {
     elementos.pedidoFilial.innerHTML = FILIAIS_PADRAO.map((filial) => `<option value="${filial.id}">${escaparHTML(filial.nome)} · ${escaparHTML(filial.cidade)}</option>`).join("");
     elementos.pedidoProduto.innerHTML = produtos
         .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-        .map((produto) => `<option value="${produto.id}">${escaparHTML(produto.nome)} · Matriz: ${formatarNumero(produto.quantidade)} ${escaparHTML(produto.unidade)}</option>`)
+        .map((produto) => `<option value="${produto.id}">${escaparHTML(produto.nome)} · CD: ${formatarNumero(produto.quantidade)} ${escaparHTML(produto.unidade)}</option>`)
         .join("");
 
     if (buscarFilial(filialId)) {
@@ -1141,13 +1157,13 @@ function configurarModalDataPedido(pedido, modo) {
             botao: "Aprovar envio"
         },
         compra: {
-            titulo: "Previsão de chegada na matriz",
-            resumo: `O pedido de ${filial?.nome || "a filial"} ficará aguardando compra. Informe quando a reposição deve chegar na matriz.`,
+            titulo: "Previsão de chegada no CD",
+            resumo: `O pedido de ${filial?.nome || "a filial"} ficará aguardando compra. Informe quando a reposição deve chegar no CD.`,
             botao: "Marcar compra"
         },
         receber_compra: {
             titulo: "Receber compra e enviar",
-            resumo: `Confirme que a compra chegou na matriz e escolha a previsão de entrega para ${filial?.nome || "a filial"}.`,
+            resumo: `Confirme que a compra chegou no CD e escolha a previsão de entrega para ${filial?.nome || "a filial"}.`,
             botao: "Receber e enviar"
         }
     }[modo];
@@ -1176,7 +1192,7 @@ function abrirModalEntrega(pedidoId) {
     });
 
     if (itensIndisponiveis.length) {
-        notificar("A matriz não possui saldo suficiente para todos os itens. Registre uma entrada ou marque o pedido como aguardando compra.", "erro");
+        notificar("O CD não possui saldo suficiente para todos os itens. Registre uma entrada ou marque o pedido como aguardando compra.", "erro");
         return;
     }
 
@@ -1235,7 +1251,7 @@ function aprovarPedido(pedidoId, dataEntrega) {
     });
 
     if (itensIndisponiveis.length) {
-        notificar("A matriz não possui saldo suficiente para todos os itens. Registre uma entrada ou marque o pedido como aguardando compra.", "erro");
+        notificar("O CD não possui saldo suficiente para todos os itens. Registre uma entrada ou marque o pedido como aguardando compra.", "erro");
         return;
     }
 
@@ -1277,7 +1293,7 @@ function aprovarPedido(pedidoId, dataEntrega) {
     salvarEstado();
     fecharModal(elementos.modalEntrega);
     renderizarTudo();
-    notificar("Pedido aprovado. Estoque da matriz baixado e entrega informada à filial.");
+    notificar("Pedido aprovado. Estoque do CD baixado e entrega informada à filial.");
 }
 
 function receberCompraMatriz(pedidoId, dataEntrega) {
@@ -1292,7 +1308,7 @@ function receberCompraMatriz(pedidoId, dataEntrega) {
 
     const filial = buscarFilial(pedido.filialId);
     const itens = itensDoPedido(pedido);
-    const confirmou = window.confirm(`Confirmar chegada da compra na matriz e enviar ${itens.length} item(ns) para ${filial?.nome || "a filial"}?`);
+    const confirmou = window.confirm(`Confirmar chegada da compra no CD e enviar ${itens.length} item(ns) para ${filial?.nome || "a filial"}?`);
 
     if (!confirmou) return;
 
@@ -1302,7 +1318,7 @@ function receberCompraMatriz(pedidoId, dataEntrega) {
     pedido.entregaPrevista = dataEntrega;
     pedido.recebidoEm = null;
     pedido.analisadoEm = agora;
-    pedido.observacaoMatriz = `Compra recebida na matriz. Envio para filial com entrega prevista: ${formatarDataSimples(dataEntrega)}.`;
+    pedido.observacaoMatriz = `Compra recebida no CD. Envio para filial com entrega prevista: ${formatarDataSimples(dataEntrega)}.`;
 
     itens.forEach((item) => {
         const produto = buscarProduto(item.produtoId);
@@ -1318,7 +1334,7 @@ function receberCompraMatriz(pedidoId, dataEntrega) {
             quantidade: item.quantidadeSolicitada,
             saldoAntes: saldoAntesCompra,
             saldoDepois: produto.quantidade,
-            observacao: `Compra recebida na matriz para atender pedido da filial ${filial?.nome || ""}.`.trim(),
+            observacao: `Compra recebida no CD para atender pedido da filial ${filial?.nome || ""}.`.trim(),
             filialId: pedido.filialId,
             pedidoId: pedido.id
         });
@@ -1341,7 +1357,7 @@ function receberCompraMatriz(pedidoId, dataEntrega) {
     salvarEstado();
     fecharModal(elementos.modalEntrega);
     renderizarTudo();
-    notificar("Compra recebida, estoque da matriz alimentado e envio para filial criado.");
+    notificar("Compra recebida, estoque do CD alimentado e envio para filial criado.");
 }
 
 function confirmarRecebimentoPedido(pedidoId) {
@@ -1384,13 +1400,13 @@ function marcarAguardandoCompra(pedidoId, dataCompra) {
     if (!pedido || pedido.situacao !== "pendente") return;
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dataCompra) || Number.isNaN(new Date(`${dataCompra}T12:00:00`).getTime())) {
-        elementos.mensagemEntrega.textContent = "Escolha uma data válida para a chegada na matriz.";
+        elementos.mensagemEntrega.textContent = "Escolha uma data válida para a chegada no CD.";
         return;
     }
 
     pedido.situacao = "aguardando_compra";
     pedido.compraPrevista = dataCompra;
-    pedido.observacaoMatriz = `Aguardando compra. Chegada prevista na matriz: ${formatarDataSimples(dataCompra)}.`;
+    pedido.observacaoMatriz = `Aguardando compra. Chegada prevista no CD: ${formatarDataSimples(dataCompra)}.`;
     pedido.analisadoEm = new Date().toISOString();
     salvarEstado();
     fecharModal(elementos.modalEntrega);
@@ -1408,7 +1424,7 @@ function recusarPedido(pedidoId) {
     if (motivo === null) return;
 
     pedido.situacao = "recusado";
-    pedido.observacaoMatriz = motivo.trim() || "Pedido recusado pela matriz.";
+    pedido.observacaoMatriz = motivo.trim() || "Pedido recusado pelo CD.";
     pedido.analisadoEm = new Date().toISOString();
     salvarEstado();
     renderizarTudo();
@@ -1694,7 +1710,7 @@ elementos.formularioMovimentacao.addEventListener("submit", (evento) => {
     }
 
     if (tipoMovimentacaoAtual === "saida" && quantidade > produto.quantidade) {
-        elementos.mensagemMovimentacao.textContent = "A saída não pode ser maior que o estoque disponível na matriz.";
+        elementos.mensagemMovimentacao.textContent = "A saída não pode ser maior que o estoque disponível no CD.";
         return;
     }
 
@@ -1759,7 +1775,7 @@ elementos.formularioPedido.addEventListener("submit", (evento) => {
     salvarEstado();
     fecharModal(elementos.modalPedido);
     renderizarTudo();
-    notificar("Pedido enviado para análise da matriz.");
+    notificar("Pedido enviado para análise do CD.");
 });
 
 elementos.formularioEntrega.addEventListener("submit", (evento) => {
@@ -1881,7 +1897,7 @@ elementos.botaoEnviarPedidoLista.addEventListener("click", () => {
     elementos.observacaoPedidoCompleto.value = "";
     salvarEstado();
     renderizarTudo();
-    notificar("Lista de pedido enviada para a matriz.");
+    notificar("Lista de pedido enviada para o CD.");
     navegar("meus-pedidos");
 });
 

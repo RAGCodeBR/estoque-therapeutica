@@ -17,7 +17,7 @@
 
             <nav class="menu-navegacao">
                 <div class="grupo-menu" id="menu-matriz">
-                    <p class="rotulo-menu">Matriz</p>
+                    <p class="rotulo-menu">Centro de Distribuição</p>
                     <button class="item-menu menu-ativo" data-pagina="dashboard"><span class="icone icone-inicio" aria-hidden="true"></span><span>Início</span></button>
                     <button class="item-menu" data-pagina="produtos"><span class="icone icone-produtos" aria-hidden="true"></span><span>Produtos</span></button>
                     <button class="item-menu" data-pagina="movimentacao" data-tipo-movimentacao="entrada"><span class="icone icone-entrada" aria-hidden="true"></span><span>Entradas</span></button>
@@ -48,14 +48,15 @@
         <div class="conteudo">
             <header class="cabecalho">
                 <div>
-                    <p>Therapeutica Pharmacia · Matriz</p>
+                    <p id="contexto-portal">Therapeutica Pharmacia · Centro de Distribuição</p>
                     <h1 id="titulo-pagina">Dashboard</h1>
                 </div>
                 <div class="acoes-cabecalho">
                     <label class="seletor-portal" for="seletor-portal">
                         <span>Visualização</span>
                         <select id="seletor-portal">
-                            <option value="matriz">Matriz</option>
+                            <option value="cd">Centro de Distribuição</option>
+                            <option value="matriz">Filial Matriz</option>
                             <option value="blumenau">Filial Blumenau</option>
                             <option value="lucas">Filial Lucas</option>
                             <option value="sinop">Filial Sinop</option>
@@ -70,7 +71,7 @@
                     <section class="apresentacao">
                         <div>
                             <p class="destaque">Estoque central</p>
-                            <h2>Controle claro para a matriz e para as filiais.</h2>
+                            <h2>Controle claro do CD para todas as filiais.</h2>
                             <p class="texto-apresentacao">Cadastre produtos, registre movimentações e acompanhe solicitações em um só lugar.</p>
                             <div class="acoes-apresentacao">
                                 <button class="botao-principal" type="button" data-acao="novo-produto"><span class="icone icone-plus" aria-hidden="true"></span>Cadastrar produto</button>
@@ -88,7 +89,7 @@
                         <article class="cartao">
                             <p>Quantidade total</p>
                             <strong id="indicador-unidades">0</strong>
-                            <span>unidades na matriz</span>
+                            <span>unidades no CD</span>
                         </article>
                         <article class="cartao cartao-alerta">
                             <p>Estoque baixo</p>
@@ -123,9 +124,9 @@
                 <section class="pagina" id="pagina-produtos">
                     <div class="cabecalho-secao">
                         <div>
-                            <p class="subtitulo-secao">Estoque central da matriz</p>
+                            <p class="subtitulo-secao">Estoque central do CD</p>
                             <h2>Produtos</h2>
-                            <p>Cadastre, consulte, edite e movimente os itens da matriz.</p>
+                            <p>Cadastre, consulte, edite e movimente os itens do Centro de Distribuição.</p>
                         </div>
                         <button class="botao-principal" type="button" data-acao="novo-produto"><span class="icone icone-plus" aria-hidden="true"></span>Cadastrar produto</button>
                     </div>
@@ -168,7 +169,7 @@
                         <div>
                             <p class="subtitulo-secao" id="movimentacao-subtitulo">Movimentação de estoque</p>
                             <h2 id="movimentacao-titulo">Registrar entrada</h2>
-                            <p id="movimentacao-descricao">Registre produtos que chegaram à matriz.</p>
+                            <p id="movimentacao-descricao">Registre produtos que chegaram ao Centro de Distribuição.</p>
                         </div>
                     </div>
 
@@ -228,7 +229,7 @@
                         <div>
                             <p class="subtitulo-secao">Solicitações das filiais</p>
                             <h2>Pedidos</h2>
-                            <p>A filial informa seu estoque atual antes de solicitar itens à matriz.</p>
+                            <p>As filiais, incluindo a Matriz, informam seu estoque atual antes de solicitar itens ao CD.</p>
                         </div>
                         <p class="aviso-fluxo">Pedidos são criados pelos portais das filiais e podem conter vários itens.</p>
                     </div>
@@ -255,7 +256,7 @@
                         <div>
                             <p class="destaque">Portal da filial</p>
                             <h2 id="titulo-portal-filial">Filial Therapeutica</h2>
-                            <p class="texto-apresentacao">Consulte seu estoque individual e envie uma lista de itens para a análise da matriz.</p>
+                            <p class="texto-apresentacao">Consulte seu estoque individual e envie uma lista de itens para a análise do CD.</p>
                             <div class="acoes-apresentacao">
                                 <button class="botao-principal" type="button" data-acao="abrir-novo-pedido-filial"><span class="icone icone-plus" aria-hidden="true"></span>Criar pedido</button>
                                 <button class="botao-secundario-claro" type="button" data-acao="ver-estoque-filial"><span class="icone icone-produtos" aria-hidden="true"></span>Ver meu estoque</button>
@@ -277,7 +278,7 @@
                         <article class="cartao cartao-alerta">
                             <p>Pedidos em aberto</p>
                             <strong id="indicador-filial-pedidos">0</strong>
-                            <span>aguardando matriz</span>
+                            <span>aguardando CD</span>
                         </article>
                     </section>
                 </section>
@@ -287,7 +288,7 @@
                         <div>
                             <p class="subtitulo-secao">Estoque individual</p>
                             <h2 id="titulo-estoque-filial">Meu estoque</h2>
-                            <p>Atualizado quando a filial informa o saldo no pedido e quando a matriz aprova uma transferência.</p>
+                            <p>Atualizado quando a filial informa o saldo no pedido e quando o CD aprova uma transferência.</p>
                         </div>
                     </div>
                     <section class="tabela-container">
@@ -311,7 +312,7 @@
                 <section class="pagina" id="pagina-novo-pedido-filial">
                     <div class="cabecalho-secao">
                         <div>
-                            <p class="subtitulo-secao">Solicitação para a matriz</p>
+                            <p class="subtitulo-secao">Solicitação para o CD</p>
                             <h2>Novo pedido</h2>
                             <p>Monte uma lista. Para cada produto, informe obrigatoriamente o estoque atual da filial.</p>
                         </div>
@@ -351,7 +352,7 @@
                             <p class="mensagem-formulario" id="mensagem-pedido-filial" aria-live="polite"></p>
                             <div class="acoes-formulario">
                                 <button type="button" class="botao-secundario" id="botao-limpar-carrinho">Limpar lista</button>
-                                <button type="button" class="botao-principal" id="botao-enviar-pedido-lista">Enviar pedido à matriz</button>
+                                <button type="button" class="botao-principal" id="botao-enviar-pedido-lista">Enviar pedido ao CD</button>
                             </div>
                         </section>
                     </section>
@@ -362,7 +363,7 @@
                         <div>
                             <p class="subtitulo-secao">Acompanhamento da filial</p>
                             <h2>Meus pedidos</h2>
-                            <p>Veja as listas enviadas e a resposta da matriz.</p>
+                            <p>Veja as listas enviadas e a resposta do CD.</p>
                         </div>
                     </div>
                     <div id="lista-meus-pedidos" class="lista-pedidos-filial"></div>
@@ -373,7 +374,7 @@
                         <div>
                             <p class="subtitulo-secao">Rede Therapeutica</p>
                             <h2>Filiais</h2>
-                            <p>Visão inicial das filiais que farão pedidos à matriz.</p>
+                            <p>Visão das filiais que farão pedidos ao Centro de Distribuição.</p>
                         </div>
                     </div>
                     <div class="grade-filiais" id="lista-filiais"></div>
@@ -429,8 +430,8 @@
                         </div>
                     </div>
                     <section class="cartao-informativo">
-                        <h3>Administrador da matriz</h3>
-                        <p>Este protótipo ainda não possui login real. Na próxima fase, o Supabase controlará autenticação e permissões de Matriz, Blumenau, Lucas e Sinop.</p>
+                        <h3>Administrador do Centro de Distribuição</h3>
+                        <p>Este protótipo ainda não possui login real. Na próxima fase, o Supabase controlará autenticação e permissões do CD, Matriz, Blumenau, Lucas e Sinop.</p>
                         <div class="papeis-usuario">
                             <span>Administrador</span><span>Filial</span><span>Consulta</span>
                         </div>
@@ -477,7 +478,7 @@
         <div class="modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-produto">
             <div class="modal-cabecalho">
                 <div>
-                    <p class="subtitulo-modal">Catálogo da matriz</p>
+                    <p class="subtitulo-modal">Catálogo do CD</p>
                     <h2 id="titulo-modal-produto">Cadastrar produto</h2>
                 </div>
                 <button class="botao-fechar" type="button" data-fechar-modal="modal-produto" aria-label="Fechar">×</button>
@@ -536,7 +537,7 @@
         <div class="modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-pedido">
             <div class="modal-cabecalho">
                 <div>
-                    <p class="subtitulo-modal">Solicitação à matriz</p>
+                    <p class="subtitulo-modal">Solicitação ao CD</p>
                     <h2 id="titulo-modal-pedido">Criar pedido</h2>
                 </div>
                 <button class="botao-fechar" type="button" data-fechar-modal="modal-pedido" aria-label="Fechar">×</button>
@@ -575,7 +576,7 @@
         <div class="modal-conteudo modal-entrega-conteudo" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-entrega">
             <div class="modal-cabecalho">
                 <div>
-                    <p class="subtitulo-modal">Aprovação da matriz</p>
+                    <p class="subtitulo-modal">Aprovação do CD</p>
                     <h2 id="titulo-modal-entrega">Data prevista de entrega</h2>
                 </div>
                 <button class="botao-fechar" type="button" data-fechar-modal="modal-entrega" aria-label="Fechar">×</button>
