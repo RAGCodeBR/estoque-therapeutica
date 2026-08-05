@@ -1,13 +1,22 @@
 const STORAGE_KEY = "therapeutica-estoque-v3";
 const LEGACY_PRODUCTS_KEY = "produtos-therapeutica";
 const LEGACY_MOVEMENTS_KEY = "movimentacoes-therapeutica";
+let supabase = null;
 
+function conectarSupabase() {
+    if (!window.supabase?.createClient) return false;
+
+    supabase = window.supabase.createClient(
+        "https://vspdodyjzybowlaerrnk.supabase.co",
+        "sb_publishable_syhF57isNxl3VtC1PWfq7w_RgHUnHsO"
+    );
+    return true;
+}
 const FILIAIS_PADRAO = [
     { id: "blumenau", nome: "Blumenau", cidade: "Blumenau, SC" },
     { id: "lucas", nome: "Lucas", cidade: "Lucas do Rio Verde, MT" },
     { id: "sinop", nome: "Sinop", cidade: "Sinop, MT" }
 ];
-
 const titulosPaginas = {
     dashboard: "Dashboard",
     produtos: "Produtos",
@@ -23,7 +32,6 @@ const titulosPaginas = {
     usuarios: "Usuários",
     configuracoes: "Configurações"
 };
-
 const elementos = {
     navegacao: [...document.querySelectorAll(".item-menu")],
     paginas: [...document.querySelectorAll(".pagina")],
@@ -121,6 +129,7 @@ let portalAtual = "matriz";
 let itensDoPedidoAtual = [];
 let temporizadorToast;
 let estado = carregarEstado();
+let filaSincronizacao = Promise.resolve();
 
 function gerarId(prefixo) {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -484,6 +493,113 @@ function carregarEstado() {
 function salvarEstado() {
     estado.atualizadoEm = new Date().toISOString();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(estado));
+    if (!supabase) {
+        notificar("Supabase indisponível. Os dados continuam salvos neste navegador.", "erro");
+        return Promise.resolve();
+    }
+    const retrato = JSON.parse(JSON.stringify(estado));
+    filaSincronizacao = filaSincronizacao
+        .catch(() => undefined)
+        .then(async () => {
+            const { error } = await supabase.rpc("substituir_estado_estoque", { p_estado: retrato });
+            if (error) throw error;
+        })
+        .catch((error) => {
+            console.error(error);
+            notificar("Nao foi possivel salvar os dados no Supabase.", "erro");
+        });
+    return filaSincronizacao;
+}
+
+async function carregarProdutosLegado() {
+    const {data, error} = await supabase
+        .from("produtos")
+        .select("*")
+        .eq("ativo", true)
+        .order("nome");
+
+    if (error) {
+        console.error(error);
+        notificar("Não foi possível carregar os produtos do Supabase.", "erro");
+        return;
+    }
+
+    estado.produtos = data.map((produto) => ({
+        ...produto,
+        estoqueMinimo: produto.estoque_minimo,
+        criadoEm: produto.criado_em,
+        atualizadoEm: produto.atualizado_em
+    }));
+
+    renderizarTudo();
+}
+
+function produtoDoBanco(produto) {
+    return {
+        id: produto.id, codigo: produto.codigo, nome: produto.nome, categoria: produto.categoria,
+        quantidade: produto.quantidade, estoqueMinimo: produto.estoque_minimo, unidade: produto.unidade,
+        ativo: produto.ativo, criadoEm: produto.criado_em, atualizadoEm: produto.atualizado_em,
+        arquivadoEm: produto.arquivado_em
+    };
+}
+
+async function carregarDadosSupabase() {
+    if (!supabase) {
+        notificar("Não foi possível carregar o Supabase. Verifique sua conexão e atualize a página.", "erro");
+        return;
+    }
+    const [produtos, filiais, pedidos, estoques, movimentacoes] = await Promise.all([
+        supabase.from("produtos").select("*").order("nome"),
+        supabase.from("filiais").select("*").order("nome"),
+        supabase.from("pedidos").select("*, itens:pedido_itens(*)").order("criado_em", { ascending: false }),
+        supabase.from("estoque_filiais").select("*"),
+        supabase.from("movimentacoes").select("*").order("criado_em", { ascending: false })
+    ]);
+    const erro = [produtos, filiais, pedidos, estoques, movimentacoes].find((resultado) => resultado.error)?.error;
+    if (erro) {
+        console.error(erro);
+        notificar("Erro ao carregar os dados do Supabase. Execute o arquivo supabase-schema.sql no SQL Editor.", "erro");
+        return;
+    }
+
+    const bancoEstaVazio = produtos.data.length === 0
+        && pedidos.data.length === 0
+        && estoques.data.length === 0
+        && movimentacoes.data.length === 0;
+    const haDadosLocais = estado.produtos.length > 0
+        || estado.pedidos.length > 0
+        || estado.movimentacoes.length > 0;
+
+    if (bancoEstaVazio && haDadosLocais) {
+        await salvarEstado();
+        renderizarTudo();
+        notificar("Estoque local migrado para o Supabase.");
+        return;
+    }
+
+    const produtosPorId = new Map(produtos.data.map((produto) => [produto.id, produtoDoBanco(produto)]));
+    estado = {
+        ...estadoPadrao(),
+        produtos: [...produtosPorId.values()],
+        filiais: filiais.data.map((filial) => ({ id: filial.id, nome: filial.nome, cidade: filial.cidade })),
+        pedidos: pedidos.data.map((pedido) => ({
+            id: pedido.id, filialId: pedido.filial_id,
+            itens: pedido.itens.map((item) => {
+                const produto = produtosPorId.get(item.produto_id);
+                return { produtoId: item.produto_id, produtoNome: produto?.nome || "Produto nao identificado", unidade: produto?.unidade || "Unidade", estoqueInformado: item.estoque_informado, quantidadeSolicitada: item.quantidade_solicitada, observacao: item.observacao };
+            }),
+            observacao: pedido.observacao, observacaoMatriz: pedido.observacao_matriz, situacao: pedido.situacao,
+            compraPrevista: pedido.compra_prevista || "", compraRecebidaEm: pedido.compra_recebida_em,
+            entregaPrevista: pedido.entrega_prevista || "", recebidoEm: pedido.recebido_em,
+            criadoEm: pedido.criado_em, analisadoEm: pedido.analisado_em
+        })),
+        estoqueFiliais: Object.fromEntries(estoques.data.map((item) => [chaveEstoqueFilial(item.filial_id, item.produto_id), { quantidade: item.quantidade, atualizadoEm: item.atualizado_em }])),
+        movimentacoes: movimentacoes.data.map((movimentacao) => {
+            const produto = produtosPorId.get(movimentacao.produto_id);
+            return { id: movimentacao.id, produtoId: movimentacao.produto_id, produtoNome: produto?.nome || "Produto nao identificado", tipo: movimentacao.tipo, quantidade: movimentacao.quantidade, unidade: produto?.unidade || "Unidade", saldoAntes: movimentacao.saldo_antes, saldoDepois: movimentacao.saldo_depois, observacao: movimentacao.observacao, filialId: movimentacao.filial_id || "", pedidoId: movimentacao.pedido_id || "", criadoEm: movimentacao.criado_em };
+        })
+    };
+    renderizarTudo();
 }
 
 function escaparHTML(valor) {
@@ -1454,6 +1570,7 @@ async function importarBackup(evento) {
 
         estado = normalizarEstado(dados);
         salvarEstado();
+
         renderizarTudo();
         navegar("dashboard");
         notificar("Backup importado com sucesso.");
@@ -1472,6 +1589,7 @@ function limparDados() {
     estado = { ...estadoPadrao(), demoDesativado: true };
     salvarEstado();
     produtoSelecionadoMovimentacao = "";
+
     renderizarTudo();
     navegar("dashboard");
     notificar("Dados locais removidos.");
@@ -1486,6 +1604,7 @@ function carregarDadosDemo() {
     salvarEstado();
     produtoSelecionadoMovimentacao = "";
     itensDoPedidoAtual = [];
+
     renderizarTudo();
     navegar("dashboard");
     notificar("Dados de demonstração carregados.");
@@ -1603,7 +1722,7 @@ elementos.movimentoProduto.addEventListener("change", () => {
     atualizarInformacaoProdutoMovimento();
 });
 
-elementos.formularioProduto.addEventListener("submit", (evento) => {
+elementos.formularioProduto.addEventListener("submit", async (evento) => {
     evento.preventDefault();
     const id = elementos.produtoId.value;
     const nome = elementos.produtoNome.value.trim();
@@ -1656,11 +1775,12 @@ elementos.formularioProduto.addEventListener("submit", (evento) => {
         arquivadoEm: null
     };
 
-    estado.produtos.push(produto);
+    const produtoSalvo = produto;
+    estado.produtos.push(produtoSalvo);
 
     if (quantidade > 0) {
         registrarMovimentacao({
-            produto,
+            produto: produtoSalvo,
             tipo: "entrada",
             quantidade,
             saldoAntes: 0,
@@ -1669,7 +1789,7 @@ elementos.formularioProduto.addEventListener("submit", (evento) => {
         });
     }
 
-    salvarEstado();
+    await salvarEstado();
     fecharModal(elementos.modalProduto);
     renderizarTudo();
     notificar("Produto cadastrado com sucesso.");
@@ -1893,3 +2013,11 @@ elementos.botaoLimparDados.addEventListener("click", limparDados);
 
 elementos.seletorPortal.value = portalAtual;
 navegar("dashboard");
+
+window.addEventListener("load", () => {
+    if (conectarSupabase()) {
+        carregarDadosSupabase();
+    } else {
+        notificar("Supabase não carregou. A interface continua disponível com os dados locais.", "erro");
+    }
+});
