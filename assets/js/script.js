@@ -65,6 +65,8 @@ const elementos = {
     formularioMovimentacao: document.querySelector("#formulario-movimentacao"),
     movimentoProduto: document.querySelector("#movimento-produto"),
     movimentoQuantidade: document.querySelector("#movimento-quantidade"),
+    campoMovimentoFilial: document.querySelector("#campo-movimento-filial"),
+    movimentoFilial: document.querySelector("#movimento-filial"),
     movimentoObservacao: document.querySelector("#movimento-observacao"),
     infoProdutoMovimento: document.querySelector("#info-produto-movimento"),
     mensagemMovimentacao: document.querySelector("#mensagem-movimentacao"),
@@ -759,6 +761,12 @@ function atualizarPaginaMovimentacao() {
     elementos.botaoConfirmarMovimento.textContent = entrada ? "Confirmar entrada" : "Confirmar saída";
 }
 
+function atualizarDestinoDaMovimentacao() {
+    const entrada = tipoMovimentacaoAtual === "entrada";
+    elementos.campoMovimentoFilial.hidden = entrada;
+    elementos.movimentoFilial.disabled = entrada;
+}
+
 function navegar(pagina, opcoes = {}) {
     const paginasFilial = ["portal-filial", "estoque-filial", "novo-pedido-filial", "meus-pedidos"];
 
@@ -802,6 +810,7 @@ function navegar(pagina, opcoes = {}) {
         : titulosPaginas[paginaAtual];
 
     atualizarPaginaMovimentacao();
+    atualizarDestinoDaMovimentacao();
     renderizarTudo();
 
     // A renderização atualiza elementos de todas as telas. Aplicamos a página
@@ -932,6 +941,7 @@ function renderizarProdutos() {
 function renderizarFormularioMovimentacao() {
     const ativos = produtosAtivos().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
     const valorExistente = produtoSelecionadoMovimentacao || elementos.movimentoProduto.value;
+    const filialSelecionada = elementos.movimentoFilial.value;
 
     elementos.movimentoProduto.innerHTML = ativos.length
         ? `<option value="">Selecione um produto</option>${ativos.map((produto) => `
@@ -948,6 +958,12 @@ function renderizarFormularioMovimentacao() {
 
     elementos.movimentoProduto.disabled = ativos.length === 0;
     elementos.botaoConfirmarMovimento.disabled = ativos.length === 0;
+    elementos.movimentoFilial.innerHTML = `<option value="">Não enviar para filial</option>${estado.filiais.map((filial) => `
+        <option value="${filial.id}">${escaparHTML(filial.nome)} · ${escaparHTML(filial.cidade)}</option>
+    `).join("")}`;
+    if (buscarFilial(filialSelecionada)) {
+        elementos.movimentoFilial.value = filialSelecionada;
+    }
     atualizarInformacaoProdutoMovimento();
 }
 
@@ -1816,6 +1832,7 @@ elementos.formularioMovimentacao.addEventListener("submit", (evento) => {
     const produto = buscarProduto(elementos.movimentoProduto.value);
     const quantidade = Number(elementos.movimentoQuantidade.value);
     const observacao = elementos.movimentoObservacao.value.trim();
+    const filial = tipoMovimentacaoAtual === "saida" ? buscarFilial(elementos.movimentoFilial.value) : null;
 
     elementos.mensagemMovimentacao.textContent = "";
 
@@ -1838,17 +1855,28 @@ elementos.formularioMovimentacao.addEventListener("submit", (evento) => {
     produto.quantidade += tipoMovimentacaoAtual === "entrada" ? quantidade : -quantidade;
     produto.atualizadoEm = new Date().toISOString();
 
+    if (filial) {
+        const chave = chaveEstoqueFilial(filial.id, produto.id);
+        const estoqueAtual = numeroInteiroNaoNegativo(estado.estoqueFiliais[chave]?.quantidade ?? estado.estoqueFiliais[chave]);
+        estado.estoqueFiliais[chave] = {
+            quantidade: estoqueAtual + quantidade,
+            atualizadoEm: produto.atualizadoEm
+        };
+    }
+
     registrarMovimentacao({
         produto,
-        tipo: tipoMovimentacaoAtual,
+        tipo: filial ? "transferencia" : tipoMovimentacaoAtual,
         quantidade,
         saldoAntes,
         saldoDepois: produto.quantidade,
-        observacao
+        observacao,
+        filialId: filial?.id || ""
     });
 
     salvarEstado();
     elementos.movimentoQuantidade.value = "";
+    elementos.movimentoFilial.value = "";
     elementos.movimentoObservacao.value = "";
     renderizarTudo();
     notificar(tipoMovimentacaoAtual === "entrada" ? "Entrada registrada." : "Saída registrada.");

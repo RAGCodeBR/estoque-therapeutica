@@ -185,6 +185,14 @@
                             <label for="movimento-quantidade">Quantidade</label>
                             <input id="movimento-quantidade" type="number" min="1" step="1" placeholder="Exemplo: 10" required>
 
+                            <div id="campo-movimento-filial" hidden>
+                                <label for="movimento-filial">Enviar para a filial</label>
+                                <select id="movimento-filial">
+                                    <option value="">Não enviar para filial</option>
+                                </select>
+                                <small>Ao selecionar uma filial, a saída será registrada como transferência direta.</small>
+                            </div>
+
                             <label for="movimento-observacao">Observação</label>
                             <textarea id="movimento-observacao" rows="4" placeholder="Exemplo: Nota fiscal, motivo da saída ou responsável"></textarea>
 
