@@ -42,6 +42,12 @@ button {
     cursor: pointer;
 }
 
+.logo-nav {
+    height: 140px;
+    width: 210px;
+    padding-left: 12px;
+}
+
 .icone {
     display: inline-block;
     flex: 0 0 auto;
@@ -98,19 +104,6 @@ textarea:focus-visible {
     margin-bottom: 30px;
     font-size: 20px;
     font-weight: 800;
-    letter-spacing: -0.5px;
-}
-
-.logo-icone {
-    display: grid;
-    width: 46px;
-    height: 46px;
-    place-items: center;
-    color: var(--branco);
-    background: linear-gradient(140deg, #dd745e, #ef9d5f);
-    border-radius: 13px;
-    box-shadow: 0 8px 18px rgba(221, 116, 94, 0.28);
-    font-size: 24px;
 }
 
 .menu-navegacao {

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estoque Therapeutica - Cadastro</title>
     <link rel="stylesheet" href="./assets/css/cadastro.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
 <body>
     <div class="div-card">
@@ -13,16 +14,22 @@
         <hr>
 
         <div class="div-cadastro">
-            <input type="text" placeholder="Nome de usuário">
+            <input type="text" id="usuario" placeholder="Nome de usuário" required>
 
-            <input type="email" placeholder="E-mail">
+            <input type="email" id="email" placeholder="E-mail" required>
 
-            <input type="password" placeholder="Senha">
-
-            <input type="password" placeholder="Confirme a senha">
+            <div class="campo-senha">
+                <input type="password" id="senha" placeholder="Senha" required>
+                <button type="button" class="botao-olho fa fa-eye" id="verSenha" aria-label="Mostrar senha"></button>
+            </div>
+            <div class="campo-senha">
+                <input type="password" id="confirmarSenha" placeholder="Confirme a senha" required>
+                <button type="button" class="botao-olho fa fa-eye" id="verConfirmSenha" aria-label="Mostrar confirmação de senha"></button>
+            </div>
             
-            <button type="submit" class="botao-cadastrar">Cadastrar</button>
+            <button type="submit" id="" class="botao-cadastrar" >Cadastrar</button>
         </div>
     </div>
+    <script src="./assets/js/cadastro.js"></script>
 </body>
 </html>

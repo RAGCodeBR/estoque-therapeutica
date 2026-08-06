@@ -27,6 +27,11 @@ body {
     align-items: center;
 }
 
+h1 {
+    padding-bottom: 20px;
+    font-size: 40px;
+}
+
 .card-login {
     display: flex;
     flex-direction: column;
