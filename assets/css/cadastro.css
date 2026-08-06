@@ -1,6 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
 
+
 :root {
     --fundo-body: #F9ECE5;
     --fundo-card: #FFFEFE;
@@ -27,27 +28,61 @@ body {
     align-items: center;
 }
 
-.card-login {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-
-    padding: 30px 140px 50px 140px;
-    gap: 20px;
-
-    border: transparent;
-    border-radius: 70px;
-
-    font-family: var(--fonte-login);
-    background-color: var(--fundo-card);
-    box-shadow: 0 15px 35px rgba(0,0,0,.08);
+hr {
+    height: 800px;
+    border: 2px solid var(--fundo-body);
 }
 
-.botao-logar {
+img {
+    width: 500px;
+    height: 400px;
+}
+
+input {
     width: 100%;
     max-width: 260px;
 
+    padding: 12px;
+
+    border: 1px solid var(--cinza);
+    border-radius: 10px;
+
+    font-size: 16px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.div-card {
+    height: 500px;
+    width: 100%;
+    max-width: 1200px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 100px;
+    
+    background-color: var(--fundo-card);
+    border: transparent;
+    border-radius: 70px;
+
+}
+
+.div-cadastro{
+    margin: 0 90px 0 70px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.botao-cadastrar {
+    width: 100%;
+    max-width: 260px;
+
+    margin-top: 25px;
     padding: 14px;
 
     border: none;
@@ -62,41 +97,4 @@ body {
     cursor: pointer;
 
     transition: .3s;
-}
-
-.logo {
-    width: 300px;
-    height: auto;
-}
-
-input {
-    width: 100%;
-    max-width: 260px;
-
-    padding: 12px;
-
-    border: 1px solid var(--cinza);
-    border-radius: 10px;
-
-    font-size: 16px;
-
-    box-sizing: border-box;
-}
-
-input:focus {
-    outline: none;
-    border-color: var(--fundo-botao);
-    box-shadow: 0 0 6px rgba(109,138,82,.3);
-}
-
-.botao-logar:hover {
-    background: #597043;
-}
-
-.div-opcoes {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 9px;
 }
