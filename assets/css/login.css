@@ -69,22 +69,17 @@ h1 {
     transition: .3s;
 }
 
-.logo {
-    width: 300px;
-    height: auto;
-}
-
 input {
     width: 100%;
     max-width: 260px;
-
+    
     padding: 12px;
-
+    
     border: 1px solid var(--cinza);
     border-radius: 10px;
-
+    
     font-size: 16px;
-
+    
     box-sizing: border-box;
 }
 
@@ -92,6 +87,11 @@ input:focus {
     outline: none;
     border-color: var(--fundo-botao);
     box-shadow: 0 0 6px rgba(109,138,82,.3);
+}
+
+.logo {
+    width: 300px;
+    height: auto;
 }
 
 .botao-logar:hover {
@@ -104,4 +104,35 @@ input:focus {
     align-items: center;
     justify-content: center;
     gap: 9px;
+}
+
+.olhoLogin {
+    width: 100%;
+    max-width: 260px;
+    display: grid;
+    grid-template-columns: 1fr 48px;
+    align-items: center;
+}
+
+.olhoLogin input {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    padding-right: 48px;
+}
+
+.olhoLogin .botao-olho {
+    position: relative;
+    grid-column: 2;
+    grid-row: 1;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    color: var(--cinza);
 }

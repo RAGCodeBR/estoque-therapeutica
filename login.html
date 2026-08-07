@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#e87861">
     <title>Estoque Therapeutica - Login</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="./assets/css/login.css">
 </head>
 <body>
@@ -15,7 +16,10 @@
             <span>Use suas credenciais para acessar o sistema.</span>
         </div>
         <input type="email" class="loginUsuario" id="" placeholder="E-mail">
-        <input type="password" class="senhaUsuario" id="" placeholder="Senha">
+        <div class="olhoLogin">
+            <input type="password" class="senhaUsuario" id="senhaLogin" placeholder="Senha">
+            <button type="button" class="botao-olho fa fa-eye" id="botaoOlho" aria-label="Mostrar senha"></button>
+        </div>
 
         <button type="button" class="botao-logar" id="botaoLogar">Entrar</button>
         <div class="div-opcoes">
@@ -23,5 +27,6 @@
             <a href="./cadastro.html">Não tem uma conta? Cadastre-se</a>
         </div>
     </div>
+    <script src="./assets/js/login.js"></script>
 </body>
 </html>
