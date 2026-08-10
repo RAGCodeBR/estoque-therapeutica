@@ -29,7 +29,6 @@ const titulosPaginas = {
     "estoque-baixo": "Estoque baixo",
     pedidos: "Pedidos",
     "portal-filial": "Portal da filial",
-    "estoque-filial": "Meu estoque",
     "novo-pedido-filial": "Novo pedido",
     "meus-pedidos": "Meus pedidos",
     filiais: "Filiais",
@@ -119,11 +118,7 @@ const elementos = {
     botaoDadosDemo: document.querySelector("#botao-dados-demo"),
     botaoLimparDados: document.querySelector("#botao-limpar-dados"),
     tituloPortalFilial: document.querySelector("#titulo-portal-filial"),
-    tituloEstoqueFilial: document.querySelector("#titulo-estoque-filial"),
-    indicadorFilialItens: document.querySelector("#indicador-filial-itens"),
-    indicadorFilialQuantidade: document.querySelector("#indicador-filial-quantidade"),
     indicadorFilialPedidos: document.querySelector("#indicador-filial-pedidos"),
-    tabelaEstoqueFilial: document.querySelector("#tabela-estoque-filial"),
     formularioItemPedido: document.querySelector("#formulario-item-pedido"),
     itemPedidoProduto: document.querySelector("#item-pedido-produto"),
     itemPedidoEstoque: document.querySelector("#item-pedido-estoque"),
@@ -167,11 +162,13 @@ function aplicarPermissoesDoUsuario() {
     if (usuarioEhCD()) {
         portalAtual = CENTRO_DISTRIBUICAO_ID;
         elementos.seletorPortal.disabled = false;
+        elementos.botaoIrAlertas.hidden = false;
         return;
     }
     portalAtual = perfilAtual.filial_id;
     elementos.seletorPortal.value = portalAtual;
     elementos.seletorPortal.disabled = true;
+    elementos.botaoIrAlertas.hidden = true;
 }
 
 function gerarId(prefixo) {
@@ -1063,7 +1060,7 @@ async function importarXmlMovimentacao() {
 }
 
 function navegar(pagina, opcoes = {}) {
-    const paginasFilial = ["portal-filial", "estoque-filial", "novo-pedido-filial", "meus-pedidos"];
+    const paginasFilial = ["portal-filial", "novo-pedido-filial", "meus-pedidos"];
 
     if (estaNoPortalFilial() && !paginasFilial.includes(pagina)) {
         pagina = "portal-filial";
@@ -1253,7 +1250,7 @@ function renderizarFormularioMovimentacao() {
 
     elementos.movimentoProduto.disabled = ativos.length === 0;
     elementos.botaoConfirmarMovimento.disabled = ativos.length === 0;
-    elementos.movimentoFilial.innerHTML = `<option value="">Não enviar para filial</option>${estado.filiais.map((filial) => `
+    elementos.movimentoFilial.innerHTML = `<option value="">Saída do CD</option>${estado.filiais.map((filial) => `
         <option value="${filial.id}">${escaparHTML(filial.nome)} · ${escaparHTML(filial.cidade)}</option>
     `).join("")}`;
     if (buscarFilial(filialSelecionada)) {
@@ -1403,38 +1400,11 @@ function renderizarPortalFilial() {
 
     if (!filial) return;
 
-    const chavesDaFilial = Object.keys(estado.estoqueFiliais).filter((chave) => chave.startsWith(`${filial.id}:`));
-    const quantidadeConhecida = chavesDaFilial.reduce((total, chave) => total + numeroInteiroNaoNegativo(estado.estoqueFiliais[chave]?.quantidade ?? estado.estoqueFiliais[chave]), 0);
     const pedidosDaFilial = estado.pedidos.filter((pedido) => pedido.filialId === filial.id);
     const abertos = pedidosDaFilial.filter((pedido) => ["pendente", "aguardando_compra", "em_transito"].includes(pedido.situacao)).length;
 
     elementos.tituloPortalFilial.textContent = `Portal Therapeutica · ${filial.nome}`;
-    elementos.tituloEstoqueFilial.textContent = `Estoque da filial ${filial.nome}`;
-    elementos.indicadorFilialItens.textContent = formatarNumero(chavesDaFilial.length);
-    elementos.indicadorFilialQuantidade.textContent = formatarNumero(quantidadeConhecida);
     elementos.indicadorFilialPedidos.textContent = formatarNumero(abertos);
-
-    const itensEstoque = chavesDaFilial.map((chave) => {
-        const produtoId = chave.split(":")[1];
-        const produto = buscarProduto(produtoId);
-        const registro = estado.estoqueFiliais[chave];
-        const quantidade = numeroInteiroNaoNegativo(registro?.quantidade ?? registro);
-        const atualizadoEm = registro?.atualizadoEm ?? "";
-
-        return { produto, quantidade, atualizadoEm };
-    }).filter((item) => item.produto);
-
-    elementos.tabelaEstoqueFilial.innerHTML = itensEstoque.length
-        ? itensEstoque.sort((a, b) => a.produto.nome.localeCompare(b.produto.nome, "pt-BR")).map((item) => `
-            <tr>
-                <td><strong>${escaparHTML(item.produto.nome)}</strong></td>
-                <td>${escaparHTML(item.produto.categoria)}</td>
-                <td><strong>${formatarNumero(item.quantidade)}</strong></td>
-                <td>${escaparHTML(item.produto.unidade)}</td>
-                <td>${item.atualizadoEm ? formatarData(item.atualizadoEm) : "Informado no pedido"}</td>
-            </tr>
-        `).join("")
-        : "<tr><td colspan=\"5\" class=\"tabela-vazia\">Nenhum estoque individual foi informado ainda. Envie um pedido para registrar o saldo atual da filial.</td></tr>";
 
     const produtos = produtosAtivos().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
     const selecionado = elementos.itemPedidoProduto.value;
@@ -1499,11 +1469,7 @@ function renderizarCarrinhoPedido() {
 }
 
 function atualizarEstoqueAtualDoItemPedido() {
-    const filial = filialAtual();
-    const produtoId = elementos.itemPedidoProduto.value;
-    elementos.itemPedidoEstoque.value = filial && produtoId
-        ? String(quantidadeEstoqueFilial(filial.id, produtoId))
-        : "";
+    elementos.itemPedidoEstoque.value = "";
 }
 
 function renderizarTudo() {
@@ -2056,9 +2022,6 @@ function lidarComAcao(acao, elemento) {
         case "abrir-novo-pedido-filial":
             navegar("novo-pedido-filial");
             break;
-        case "ver-estoque-filial":
-            navegar("estoque-filial");
-            break;
         case "remover-item-pedido":
             itensDoPedidoAtual.splice(Number(elemento.dataset.indiceItem), 1);
             renderizarCarrinhoPedido();
@@ -2463,7 +2426,7 @@ elementos.botaoEnviarPedidoLista.addEventListener("click", async () => {
     navegar("meus-pedidos");
 });
 
-elementos.botaoIrAlertas.addEventListener("click", () => navegar(estaNoPortalFilial() ? "estoque-filial" : "estoque-baixo"));
+elementos.botaoIrAlertas.addEventListener("click", () => navegar("estoque-baixo"));
 elementos.botaoSair.addEventListener("click", async () => {
     if (!clienteSupabase) return;
     await clienteSupabase.auth.signOut();

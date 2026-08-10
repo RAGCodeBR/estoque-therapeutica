@@ -32,7 +32,6 @@
                 <div class="grupo-menu" id="menu-filial" hidden>
                     <p class="rotulo-menu">Portal da filial</p>
                     <button class="item-menu" data-pagina="portal-filial"><span class="icone icone-inicio" aria-hidden="true"></span><span>Início</span></button>
-                    <button class="item-menu" data-pagina="estoque-filial"><span class="icone icone-produtos" aria-hidden="true"></span><span>Meu estoque</span></button>
                     <button class="item-menu" data-pagina="novo-pedido-filial"><span class="icone icone-pedidos" aria-hidden="true"></span><span>Novo pedido</span></button>
                     <button class="item-menu" data-pagina="meus-pedidos"><span class="icone icone-historico" aria-hidden="true"></span><span>Meus pedidos</span></button>
                 </div>
@@ -197,7 +196,7 @@
                             <div id="campo-movimento-filial" hidden>
                                 <label for="movimento-filial">Enviar para a filial</label>
                                 <select id="movimento-filial">
-                                    <option value="">Não enviar para filial</option>
+                                    <option value="">Saída do CD</option>
                                 </select>
                                 <small>Ao selecionar uma filial, a saída será registrada como transferência direta.</small>
                             </div>
@@ -273,25 +272,14 @@
                         <div>
                             <p class="destaque">Portal da filial</p>
                             <h2 id="titulo-portal-filial">Filial Therapeutica</h2>
-                            <p class="texto-apresentacao">Consulte seu estoque individual e envie uma lista de itens para a análise do CD.</p>
+                            <p class="texto-apresentacao">Envie uma lista de itens para a análise do CD.</p>
                             <div class="acoes-apresentacao">
                                 <button class="botao-principal" type="button" data-acao="abrir-novo-pedido-filial"><span class="icone icone-plus" aria-hidden="true"></span>Criar pedido</button>
-                                <button class="botao-secundario-claro" type="button" data-acao="ver-estoque-filial"><span class="icone icone-produtos" aria-hidden="true"></span>Ver meu estoque</button>
                             </div>
                         </div>
                     </section>
 
                     <section class="indicadores" aria-label="Indicadores da filial">
-                        <article class="cartao">
-                            <p>Itens informados</p>
-                            <strong id="indicador-filial-itens">0</strong>
-                            <span>no estoque da filial</span>
-                        </article>
-                        <article class="cartao">
-                            <p>Quantidade conhecida</p>
-                            <strong id="indicador-filial-quantidade">0</strong>
-                            <span>unidades registradas</span>
-                        </article>
                         <article class="cartao cartao-alerta">
                             <p>Pedidos em aberto</p>
                             <strong id="indicador-filial-pedidos">0</strong>
@@ -300,38 +288,12 @@
                     </section>
                 </section>
 
-                <section class="pagina" id="pagina-estoque-filial">
-                    <div class="cabecalho-secao">
-                        <div>
-                            <p class="subtitulo-secao">Estoque individual</p>
-                            <h2 id="titulo-estoque-filial">Meu estoque</h2>
-                            <p>Atualizado quando a filial informa o saldo no pedido e quando o CD aprova uma transferência.</p>
-                        </div>
-                    </div>
-                    <section class="tabela-container">
-                        <div class="tabela-responsiva">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Produto</th>
-                                        <th>Categoria</th>
-                                        <th>Quantidade conhecida</th>
-                                        <th>Unidade</th>
-                                        <th>Última atualização</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="tabela-estoque-filial"></tbody>
-                            </table>
-                        </div>
-                    </section>
-                </section>
-
                 <section class="pagina" id="pagina-novo-pedido-filial">
                     <div class="cabecalho-secao">
                         <div>
                             <p class="subtitulo-secao">Solicitação para o CD</p>
                             <h2>Novo pedido</h2>
-                            <p>Monte uma lista. O estoque atual de cada produto é preenchido automaticamente conforme o estoque da filial.</p>
+                            <p>Monte uma lista e informe manualmente o estoque atual de cada produto.</p>
                         </div>
                     </div>
 
@@ -344,7 +306,7 @@
                             <div class="campos-lado-a-lado">
                                 <div>
                                     <label for="item-pedido-estoque">Estoque atual na filial</label>
-                                    <input type="number" id="item-pedido-estoque" min="0" step="1" placeholder="0" readonly aria-readonly="true" required>
+                                    <input type="number" id="item-pedido-estoque" min="0" step="1" placeholder="0" required>
                                 </div>
                                 <div>
                                     <label for="item-pedido-quantidade">Quantidade solicitada</label>
