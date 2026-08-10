@@ -3,7 +3,8 @@
 ## Acesso e Supabase
 
 - O acesso é feito com e-mail e senha pelo Supabase Auth.
-- Execute `supabase/supabase-schema.sql`, `supabase/usuarios-auth.sql` e `supabase/usuarios-admin.sql`, nessa ordem, no SQL Editor.
+- Antes de abrir o sistema, execute `node scripts/gerar-config.js` para gerar `assets/js/env.js` a partir de `.env.local`.
+- Execute `supabase/supabase-schema.sql`, `supabase/usuarios-auth.sql`, `supabase/usuarios-admin.sql` e `supabase/concorrencia.sql`, nessa ordem, no SQL Editor.
 - Cadastros novos entram como usuários de filial. Promova o primeiro administrador usando o comando comentado em `usuarios-auth.sql`.
 - O banco usa Row Level Security: filiais veem somente seu estoque e pedidos; administradores do CD administram o estoque global.
 

@@ -8,6 +8,7 @@ let usuarioAtual = null;
 let perfilAtual = null;
 let idsPedidosRemotos = new Set();
 let usuarios = [];
+let estadoSincronizado = null;
 
 function conectarSupabase() {
     if (!window.supabase?.createClient) return false;
@@ -554,8 +555,68 @@ async function gravarTabela(tabela, registros) {
     if (error) throw error;
 }
 
+function produtoParaBanco(p) {
+    return { id: p.id, codigo: p.codigo, nome: p.nome, categoria: p.categoria, quantidade: p.quantidade, estoque_minimo: p.estoqueMinimo, unidade: p.unidade, ativo: p.ativo, criado_em: p.criadoEm, atualizado_em: p.atualizadoEm, arquivado_em: p.arquivadoEm || null };
+}
+
+async function sincronizarProdutos(produtos, produtosAnteriores) {
+    const anteriores = new Map(produtosAnteriores.map((produto) => [produto.id, produto]));
+    for (const produto of produtos) {
+        const anterior = anteriores.get(produto.id);
+        const registro = produtoParaBanco(produto);
+        if (!anterior) {
+            await gravarTabela("produtos", [registro]);
+            continue;
+        }
+        const { data, error } = await clienteSupabase.from("produtos")
+            .update(registro)
+            .eq("id", produto.id)
+            .eq("atualizado_em", anterior.atualizadoEm)
+            .select("id");
+        if (error) throw error;
+        if (!data?.length) throw new Error("Conflito de atualização: este produto foi alterado por outro usuário. Recarregue a página antes de tentar novamente.");
+    }
+}
+
+async function sincronizarEstoqueFiliais(registros, estoqueAnterior) {
+    for (const registro of registros) {
+        const chave = chaveEstoqueFilial(registro.filial_id, registro.produto_id);
+        const anterior = estoqueAnterior[chave];
+        if (!anterior) {
+            await gravarTabela("estoque_filiais", [registro]);
+            continue;
+        }
+        const { data, error } = await clienteSupabase.from("estoque_filiais")
+            .update(registro)
+            .eq("filial_id", registro.filial_id)
+            .eq("produto_id", registro.produto_id)
+            .eq("atualizado_em", anterior.atualizadoEm)
+            .select("produto_id");
+        if (error) throw error;
+        if (!data?.length) throw new Error("Conflito de atualização: o estoque da filial foi alterado por outro usuário. Recarregue a página antes de tentar novamente.");
+    }
+}
+
+async function sincronizarPedidos(pedidos, pedidosAnteriores) {
+    const anteriores = new Map(pedidosAnteriores.map((pedido) => [pedido.id, pedido]));
+    for (const pedido of pedidos) {
+        const anterior = anteriores.get(pedido.id);
+        if (!anterior) {
+            await gravarTabela("pedidos", [pedidoParaBanco(pedido)]);
+            continue;
+        }
+        const { data, error } = await clienteSupabase.from("pedidos")
+            .update(pedidoParaBanco(pedido))
+            .eq("id", pedido.id)
+            .eq("atualizado_em", anterior.atualizadoEm)
+            .select("id");
+        if (error) throw error;
+        if (!data?.length) throw new Error("Conflito de atualização: este pedido foi alterado por outro usuário. Recarregue a página antes de tentar novamente.");
+    }
+}
+
 function pedidoParaBanco(pedido) {
-    return { id: pedido.id, filial_id: pedido.filialId, observacao: pedido.observacao || "", observacao_matriz: pedido.observacaoMatriz || "", situacao: pedido.situacao, compra_prevista: pedido.compraPrevista || null, compra_recebida_em: pedido.compraRecebidaEm || null, entrega_prevista: pedido.entregaPrevista || null, recebido_em: pedido.recebidoEm || null, criado_em: pedido.criadoEm, analisado_em: pedido.analisadoEm || null };
+    return { id: pedido.id, filial_id: pedido.filialId, observacao: pedido.observacao || "", observacao_matriz: pedido.observacaoMatriz || "", situacao: pedido.situacao, compra_prevista: pedido.compraPrevista || null, compra_recebida_em: pedido.compraRecebidaEm || null, entrega_prevista: pedido.entregaPrevista || null, recebido_em: pedido.recebidoEm || null, criado_em: pedido.criadoEm, analisado_em: pedido.analisadoEm || null, atualizado_em: pedido.atualizadoEm };
 }
 
 function itensParaBanco(pedidos) {
@@ -571,12 +632,29 @@ async function sincronizarEstadoNoSupabase() {
         novos.forEach((pedido) => idsPedidosRemotos.add(pedido.id));
         return;
     }
-    await gravarTabela("filiais", estado.filiais);
-    await gravarTabela("produtos", estado.produtos.map((p) => ({ id: p.id, codigo: p.codigo, nome: p.nome, categoria: p.categoria, quantidade: p.quantidade, estoque_minimo: p.estoqueMinimo, unidade: p.unidade, ativo: p.ativo, criado_em: p.criadoEm, atualizado_em: p.atualizadoEm, arquivado_em: p.arquivadoEm || null })));
-    await gravarTabela("pedidos", estado.pedidos.map(pedidoParaBanco));
-    await gravarTabela("pedido_itens", itensParaBanco(estado.pedidos));
-    await gravarTabela("estoque_filiais", Object.entries(estado.estoqueFiliais).map(([chave, valor]) => { const [filial_id, produto_id] = chave.split(":"); return { filial_id, produto_id, quantidade: valor.quantidade, atualizado_em: valor.atualizadoEm }; }));
-    await gravarTabela("movimentacoes", estado.movimentacoes.map((m) => ({ id: m.id, produto_id: m.produtoId, tipo: m.tipo, quantidade: m.quantidade, saldo_antes: m.saldoAntes, saldo_depois: m.saldoDepois, observacao: m.observacao || "", filial_id: m.filialId || null, pedido_id: m.pedidoId || null, criado_em: m.criadoEm })));
+    const retrato = JSON.parse(JSON.stringify(estado));
+    const anterior = estadoSincronizado || estadoPadrao();
+    const alterados = (atuais, anteriores) => {
+        const mapaAnterior = new Map(anteriores.map((item) => [item.id, item]));
+        return atuais.filter((item) => JSON.stringify(item) !== JSON.stringify(mapaAnterior.get(item.id)));
+    };
+    const produtos = alterados(retrato.produtos, anterior.produtos);
+    const pedidos = alterados(retrato.pedidos, anterior.pedidos);
+    pedidos.forEach((pedido) => {
+        pedido.atualizadoEm = new Date().toISOString();
+        const local = estado.pedidos.find((item) => item.id === pedido.id);
+        if (local) local.atualizadoEm = pedido.atualizadoEm;
+    });
+    const movimentacoes = alterados(retrato.movimentacoes, anterior.movimentacoes);
+    const estoque = Object.entries(retrato.estoqueFiliais)
+        .filter(([chave, valor]) => JSON.stringify(valor) !== JSON.stringify(anterior.estoqueFiliais[chave]))
+        .map(([chave, valor]) => { const [filial_id, produto_id] = chave.split(":"); return { filial_id, produto_id, quantidade: valor.quantidade, atualizado_em: valor.atualizadoEm }; });
+    await sincronizarProdutos(produtos, anterior.produtos);
+    await sincronizarPedidos(pedidos, anterior.pedidos);
+    await gravarTabela("pedido_itens", itensParaBanco(pedidos));
+    await sincronizarEstoqueFiliais(estoque, anterior.estoqueFiliais);
+    await gravarTabela("movimentacoes", movimentacoes.map((m) => ({ id: m.id, produto_id: m.produtoId, tipo: m.tipo, quantidade: m.quantidade, saldo_antes: m.saldoAntes, saldo_depois: m.saldoDepois, observacao: m.observacao || "", filial_id: m.filialId || null, pedido_id: m.pedidoId || null, criado_em: m.criadoEm })));
+    estadoSincronizado = retrato;
 }
 
 async function carregarProdutosLegado() {
@@ -659,7 +737,7 @@ async function carregarDadosSupabase() {
             observacao: pedido.observacao, observacaoMatriz: pedido.observacao_matriz, situacao: pedido.situacao,
             compraPrevista: pedido.compra_prevista || "", compraRecebidaEm: pedido.compra_recebida_em,
             entregaPrevista: pedido.entrega_prevista || "", recebidoEm: pedido.recebido_em,
-            criadoEm: pedido.criado_em, analisadoEm: pedido.analisado_em
+            criadoEm: pedido.criado_em, analisadoEm: pedido.analisado_em, atualizadoEm: pedido.atualizado_em
         })),
         estoqueFiliais: Object.fromEntries(estoques.data.map((item) => [chaveEstoqueFilial(item.filial_id, item.produto_id), { quantidade: item.quantidade, atualizadoEm: item.atualizado_em }])),
         movimentacoes: movimentacoes.data.map((movimentacao) => {
@@ -668,6 +746,7 @@ async function carregarDadosSupabase() {
         })
     };
     idsPedidosRemotos = new Set(estado.pedidos.map((pedido) => pedido.id));
+    estadoSincronizado = JSON.parse(JSON.stringify(estado));
     renderizarTudo();
 }
 
@@ -2010,7 +2089,8 @@ elementos.formularioPedido.addEventListener("submit", (evento) => {
         observacaoMatriz: "",
         situacao: "pendente",
         criadoEm: new Date().toISOString(),
-        analisadoEm: null
+        analisadoEm: null,
+        atualizadoEm: agora
     });
 
     salvarEstado();
@@ -2124,7 +2204,8 @@ elementos.botaoEnviarPedidoLista.addEventListener("click", () => {
         observacaoMatriz: "",
         situacao: "pendente",
         criadoEm: agora,
-        analisadoEm: null
+        analisadoEm: null,
+        atualizadoEm: agora
     });
 
     itens.forEach((item) => {
