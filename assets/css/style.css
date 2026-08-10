@@ -323,6 +323,14 @@ main {
 .botao-principal,
 .botao-secundario,
 .botao-perigo,
+.botao-xml-remover {
+    min-height: 32px;
+    margin-top: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
 .botao-secundario-claro {
     display: inline-flex;
     align-items: center;

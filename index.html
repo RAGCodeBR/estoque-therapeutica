@@ -171,6 +171,19 @@
 
                     <section class="formulario-pagina-container">
                         <form id="formulario-movimentacao" class="formulario-pagina">
+                            <div id="campo-movimento-xml">
+                                <label for="movimento-xml">Nota fiscal em XML</label>
+                                <input id="movimento-xml" type="file" accept=".xml,text/xml,application/xml">
+                                <small>Anexe uma NF-e para preencher o produto, a quantidade e a observação. O arquivo não é enviado nem armazenado.</small>
+                                <button type="button" class="botao-secundario botao-xml-remover" id="botao-remover-xml" hidden>Remover XML</button>
+                                <div id="campo-item-xml" hidden>
+                                    <label for="movimento-item-xml">Item da nota</label>
+                                    <select id="movimento-item-xml"></select>
+                                </div>
+                                <p class="mensagem-formulario" id="mensagem-xml" aria-live="polite"></p>
+                                <button type="button" class="botao-secundario" id="botao-cadastrar-produto-xml" hidden>Cadastrar produto deste item</button>
+                            </div>
+
                             <label for="movimento-produto">Produto</label>
                             <select id="movimento-produto" required></select>
 

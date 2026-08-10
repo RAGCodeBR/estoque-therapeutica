@@ -66,6 +66,13 @@ const elementos = {
     movimentoSubtitulo: document.querySelector("#movimentacao-subtitulo"),
     movimentoDescricao: document.querySelector("#movimentacao-descricao"),
     formularioMovimentacao: document.querySelector("#formulario-movimentacao"),
+    campoMovimentoXml: document.querySelector("#campo-movimento-xml"),
+    movimentoXml: document.querySelector("#movimento-xml"),
+    botaoRemoverXml: document.querySelector("#botao-remover-xml"),
+    campoItemXml: document.querySelector("#campo-item-xml"),
+    movimentoItemXml: document.querySelector("#movimento-item-xml"),
+    mensagemXml: document.querySelector("#mensagem-xml"),
+    botaoCadastrarProdutoXml: document.querySelector("#botao-cadastrar-produto-xml"),
     movimentoProduto: document.querySelector("#movimento-produto"),
     movimentoQuantidade: document.querySelector("#movimento-quantidade"),
     campoMovimentoFilial: document.querySelector("#campo-movimento-filial"),
@@ -143,6 +150,8 @@ const elementos = {
 let paginaAtual = "dashboard";
 let tipoMovimentacaoAtual = "entrada";
 let produtoSelecionadoMovimentacao = "";
+let itensXmlMovimentacao = [];
+let indiceItemXmlSelecionado = null;
 let portalAtual = CENTRO_DISTRIBUICAO_ID;
 let itensDoPedidoAtual = [];
 let temporizadorToast;
@@ -905,6 +914,152 @@ function atualizarDestinoDaMovimentacao() {
     const entrada = tipoMovimentacaoAtual === "entrada";
     elementos.campoMovimentoFilial.hidden = entrada;
     elementos.movimentoFilial.disabled = entrada;
+    elementos.campoMovimentoXml.hidden = !entrada;
+    elementos.movimentoXml.disabled = !entrada;
+}
+
+function textoNormalizado(valor) {
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLocaleLowerCase("pt-BR")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+}
+
+function elementosXmlPorNome(documento, nome) {
+    return [...documento.getElementsByTagName("*")].filter((elemento) => elemento.localName === nome);
+}
+
+function textoDoElementoXml(elemento, nome) {
+    return elementosXmlPorNome(elemento, nome)[0]?.textContent?.trim() || "";
+}
+
+function encontrarProdutoDoXml(item) {
+    const codigo = String(item.codigo || "").trim();
+    const nome = textoNormalizado(item.nome);
+    return (codigo && produtosAtivos().find((produto) => String(produto.codigo || "").trim() === codigo))
+        || produtosAtivos().find((produto) => textoNormalizado(produto.nome) === nome);
+}
+
+function atualizarBotaoCadastrarProdutoXml() {
+    const item = itensXmlMovimentacao[indiceItemXmlSelecionado];
+    const produtoEncontrado = item && encontrarProdutoDoXml(item);
+    elementos.botaoCadastrarProdutoXml.hidden = !item || Boolean(produtoEncontrado) || Boolean(elementos.movimentoProduto.value);
+}
+
+function preencherItemXmlMovimentacao(indice) {
+    const item = itensXmlMovimentacao[Number(indice)];
+    if (!item) return;
+
+    indiceItemXmlSelecionado = Number(indice);
+    const produto = encontrarProdutoDoXml(item);
+    produtoSelecionadoMovimentacao = produto?.id || "";
+    elementos.movimentoProduto.value = produtoSelecionadoMovimentacao;
+    elementos.movimentoQuantidade.value = Number.isInteger(item.quantidade) && item.quantidade > 0 ? String(item.quantidade) : "";
+    elementos.movimentoObservacao.value = item.observacao;
+    atualizarInformacaoProdutoMovimento();
+
+    elementos.mensagemXml.textContent = produto
+        ? `Item ${Number(indice) + 1} preenchido com o produto cadastrado “${produto.nome}”.`
+        : `Item ${Number(indice) + 1} carregado. Selecione manualmente o produto correspondente, pois ele não foi encontrado no cadastro.`;
+    atualizarBotaoCadastrarProdutoXml();
+}
+
+function limparImportacaoXml(limparCampos = true) {
+    itensXmlMovimentacao = [];
+    indiceItemXmlSelecionado = null;
+    elementos.movimentoXml.value = "";
+    elementos.movimentoItemXml.innerHTML = "";
+    elementos.campoItemXml.hidden = true;
+    elementos.mensagemXml.textContent = "";
+    elementos.botaoRemoverXml.hidden = true;
+    elementos.botaoCadastrarProdutoXml.hidden = true;
+
+    if (limparCampos) {
+        produtoSelecionadoMovimentacao = "";
+        elementos.movimentoProduto.value = "";
+        elementos.movimentoQuantidade.value = "";
+        elementos.movimentoObservacao.value = "";
+        atualizarInformacaoProdutoMovimento();
+    }
+}
+
+function unidadeDoXml(unidade) {
+    const unidades = {
+        un: "Unidade", und: "Unidade", unidade: "Unidade",
+        cx: "Caixa", caixa: "Caixa",
+        pct: "Pacote", pc: "Pacote", pacote: "Pacote",
+        l: "Litro", lt: "Litro", litro: "Litro",
+        kg: "Quilograma", quilograma: "Quilograma"
+    };
+    return unidades[textoNormalizado(unidade)] || "";
+}
+
+function abrirCadastroProdutoDoXml() {
+    const item = itensXmlMovimentacao[indiceItemXmlSelecionado];
+    if (!item) return;
+
+    abrirModalProduto();
+    elementos.produtoCodigo.value = item.codigo;
+    elementos.produtoNome.value = item.nome;
+    elementos.produtoCategoria.value = "Outros";
+    elementos.produtoQuantidade.value = "0";
+    elementos.produtoMinimo.value = "0";
+    elementos.produtoUnidade.value = unidadeDoXml(item.unidade);
+    elementos.mensagemProduto.textContent = "Confira a categoria e a unidade antes de salvar. A quantidade da nota continuará preenchida na entrada.";
+}
+
+function carregarItensDoXml(texto) {
+    const documento = new DOMParser().parseFromString(texto, "application/xml");
+    if (documento.querySelector("parsererror")) throw new Error("O arquivo não contém um XML válido.");
+
+    const numeroNota = textoDoElementoXml(documento, "nNF");
+    const emitente = textoDoElementoXml(elementosXmlPorNome(documento, "emit")[0] || documento, "xNome");
+    const itens = elementosXmlPorNome(documento, "det").map((detalhe) => {
+        const produto = elementosXmlPorNome(detalhe, "prod")[0] || detalhe;
+        const quantidadeTexto = textoDoElementoXml(produto, "qCom").replace(",", ".");
+        const quantidade = Number(quantidadeTexto);
+        const nome = textoDoElementoXml(produto, "xProd");
+        const codigo = textoDoElementoXml(produto, "cProd");
+        const unidade = textoDoElementoXml(produto, "uCom");
+        const descricaoNota = numeroNota ? `NF-e ${numeroNota}` : "NF-e importada por XML";
+        return {
+            codigo,
+            nome,
+            unidade,
+            quantidade: Number.isInteger(quantidade) ? quantidade : 0,
+            observacao: `${descricaoNota}${emitente ? ` · ${emitente}` : ""}${codigo ? ` · Cód. ${codigo}` : ""}${unidade ? ` · ${unidade}` : ""}`
+        };
+    }).filter((item) => item.nome || item.codigo);
+
+    if (!itens.length) throw new Error("Nenhum item de produto foi encontrado no XML.");
+    return itens;
+}
+
+async function importarXmlMovimentacao() {
+    const arquivo = elementos.movimentoXml.files?.[0];
+    limparImportacaoXml(false);
+    if (!arquivo) return;
+
+    if (!/\.xml$/i.test(arquivo.name) && !["text/xml", "application/xml"].includes(arquivo.type)) {
+        elementos.mensagemXml.textContent = "Selecione um arquivo XML de nota fiscal.";
+        elementos.movimentoXml.value = "";
+        return;
+    }
+
+    try {
+        itensXmlMovimentacao = carregarItensDoXml(await arquivo.text());
+        elementos.movimentoItemXml.innerHTML = itensXmlMovimentacao.map((item, indice) => `
+            <option value="${indice}">${indice + 1}. ${escaparHTML(item.nome || item.codigo)} · ${formatarNumero(item.quantidade)} unidade(s)</option>
+        `).join("");
+        elementos.campoItemXml.hidden = false;
+        elementos.botaoRemoverXml.hidden = false;
+        preencherItemXmlMovimentacao(0);
+    } catch (erro) {
+        console.error(erro);
+        elementos.mensagemXml.textContent = erro.message || "Não foi possível ler o XML.";
+    }
 }
 
 function navegar(pagina, opcoes = {}) {
@@ -1971,7 +2126,12 @@ elementos.filtroHistorico.addEventListener("change", renderizarHistorico);
 elementos.movimentoProduto.addEventListener("change", () => {
     produtoSelecionadoMovimentacao = elementos.movimentoProduto.value;
     atualizarInformacaoProdutoMovimento();
+    atualizarBotaoCadastrarProdutoXml();
 });
+elementos.movimentoXml.addEventListener("change", importarXmlMovimentacao);
+elementos.movimentoItemXml.addEventListener("change", () => preencherItemXmlMovimentacao(elementos.movimentoItemXml.value));
+elementos.botaoRemoverXml.addEventListener("click", () => limparImportacaoXml());
+elementos.botaoCadastrarProdutoXml.addEventListener("click", abrirCadastroProdutoDoXml);
 
 elementos.formularioProduto.addEventListener("submit", async (evento) => {
     evento.preventDefault();
@@ -2043,6 +2203,9 @@ elementos.formularioProduto.addEventListener("submit", async (evento) => {
     await salvarEstado();
     fecharModal(elementos.modalProduto);
     renderizarTudo();
+    if (Number.isInteger(indiceItemXmlSelecionado)) {
+        preencherItemXmlMovimentacao(indiceItemXmlSelecionado);
+    }
     notificar("Produto cadastrado com sucesso.");
 });
 
@@ -2097,6 +2260,7 @@ elementos.formularioMovimentacao.addEventListener("submit", (evento) => {
     elementos.movimentoQuantidade.value = "";
     elementos.movimentoFilial.value = "";
     elementos.movimentoObservacao.value = "";
+    limparImportacaoXml(false);
     renderizarTudo();
     notificar(tipoMovimentacaoAtual === "entrada" ? "Entrada registrada." : "Saída registrada.");
 });
