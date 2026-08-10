@@ -1,4 +1,3 @@
 .DS_Store
 *.log
 .env.local
-assets/js/env.js
