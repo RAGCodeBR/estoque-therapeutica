@@ -9,24 +9,27 @@
     <link rel="stylesheet" href="./assets/css/login.css">
 </head>
 <body>
-    <div class="card-login">
+    <form class="card-login" id="formulario-login">
         <img class="logo" src="./assets/img/therapeutica-logo-01.png"> 
         <div>
             <h1>Entrar</h1>
             <span>Use suas credenciais para acessar o sistema.</span>
         </div>
-        <input type="email" class="loginUsuario" id="" placeholder="E-mail">
+        <input type="email" class="loginUsuario" id="email-login" placeholder="E-mail" required autocomplete="email">
         <div class="olhoLogin">
-            <input type="password" class="senhaUsuario" id="senhaLogin" placeholder="Senha">
+            <input type="password" class="senhaUsuario" id="senhaLogin" placeholder="Senha" required autocomplete="current-password">
             <button type="button" class="botao-olho fa fa-eye" id="botaoOlho" aria-label="Mostrar senha"></button>
         </div>
 
-        <button type="button" class="botao-logar" id="botaoLogar">Entrar</button>
+        <button type="submit" class="botao-logar" id="botaoLogar">Entrar</button>
+        <p class="mensagem-autenticacao" id="mensagem-login" role="status" aria-live="polite"></p>
         <div class="div-opcoes">
-            <a href="">Esqueci a minha senha</a>
+            <a href="#" id="esqueci-senha">Esqueci a minha senha</a>
             <a href="./cadastro.html">Não tem uma conta? Cadastre-se</a>
         </div>
-    </div>
+    </form>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'"></script>
+    <script src="./assets/js/supabase-client.js"></script>
     <script src="./assets/js/login.js"></script>
 </body>
 </html>

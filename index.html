@@ -62,6 +62,7 @@
                         </select>
                     </label>
                     <button class="notificacoes" type="button" id="botao-ir-alertas" title="Ver estoque baixo" aria-label="Ver alertas de estoque"><span class="icone icone-alerta" aria-hidden="true"></span></button>
+                    <button class="botao-secundario" type="button" id="botao-sair">Sair</button>
                 </div>
             </header>
 
@@ -438,7 +439,7 @@
                     </div>
                     <section class="cartao-informativo">
                         <h3>Administrador do Centro de Distribuição</h3>
-                        <p>Este protótipo ainda não possui login real. Na próxima fase, o Supabase controlará autenticação e permissões do CD, Matriz, Blumenau, Lucas e Sinop.</p>
+                        <p>O acesso é protegido pelo Supabase Auth. Cada usuário possui um perfil e uma filial vinculada; as permissões são aplicadas diretamente no banco de dados.</p>
                         <div class="papeis-usuario">
                             <span>Administrador</span><span>Filial</span><span>Consulta</span>
                         </div>
@@ -619,7 +620,8 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-    <script src="./assets/js/script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'"></script>
+    <script src="./assets/js/supabase-client.js"></script>
+    <script src="./assets/js/script.js"></script>
 </body>
 </html>

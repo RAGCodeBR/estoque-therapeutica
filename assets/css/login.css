@@ -136,3 +136,5 @@ input:focus {
     cursor: pointer;
     color: var(--cinza);
 }
+
+.mensagem-autenticacao { min-height: 20px; max-width: 260px; text-align: center; color: #a94332; font-size: 14px; }

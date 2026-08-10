@@ -3,16 +3,16 @@ const LEGACY_PRODUCTS_KEY = "produtos-therapeutica";
 const LEGACY_MOVEMENTS_KEY = "movimentacoes-therapeutica";
 const LEGACY_STORAGE_KEYS = ["therapeutica-estoque-v3"];
 const CENTRO_DISTRIBUICAO_ID = "cd";
-let supabase = null;
+let clienteSupabase = null;
+let usuarioAtual = null;
+let perfilAtual = null;
+let idsPedidosRemotos = new Set();
 
 function conectarSupabase() {
     if (!window.supabase?.createClient) return false;
 
-    supabase = window.supabase.createClient(
-        "https://vspdodyjzybowlaerrnk.supabase.co",
-        "sb_publishable_syhF57isNxl3VtC1PWfq7w_RgHUnHsO"
-    );
-    return true;
+    clienteSupabase = obterClienteSupabase();
+    return Boolean(clienteSupabase);
 }
 const FILIAIS_PADRAO = [
     { id: "matriz", nome: "Matriz", cidade: "Sede administrativa" },
@@ -103,6 +103,7 @@ const elementos = {
     mensagemEntrega: document.querySelector("#mensagem-entrega"),
     botaoConfirmarData: document.querySelector("#botao-confirmar-data"),
     botaoIrAlertas: document.querySelector("#botao-ir-alertas"),
+    botaoSair: document.querySelector("#botao-sair"),
     botaoExportar: document.querySelector("#botao-exportar"),
     arquivoImportar: document.querySelector("#arquivo-importar"),
     botaoDadosDemo: document.querySelector("#botao-dados-demo"),
@@ -136,6 +137,22 @@ let itensDoPedidoAtual = [];
 let temporizadorToast;
 let estado = carregarEstado();
 let filaSincronizacao = Promise.resolve();
+
+function usuarioEhCD() {
+    return perfilAtual?.papel === "cd_admin";
+}
+
+function aplicarPermissoesDoUsuario() {
+    if (!perfilAtual) return;
+    if (usuarioEhCD()) {
+        portalAtual = CENTRO_DISTRIBUICAO_ID;
+        elementos.seletorPortal.disabled = false;
+        return;
+    }
+    portalAtual = perfilAtual.filial_id;
+    elementos.seletorPortal.value = portalAtual;
+    elementos.seletorPortal.disabled = true;
+}
 
 function gerarId(prefixo) {
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -507,17 +524,13 @@ function carregarEstado() {
 function salvarEstado() {
     estado.atualizadoEm = new Date().toISOString();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(estado));
-    if (!supabase) {
+    if (!clienteSupabase) {
         notificar("Supabase indisponível. Os dados continuam salvos neste navegador.", "erro");
         return Promise.resolve();
     }
-    const retrato = JSON.parse(JSON.stringify(estado));
     filaSincronizacao = filaSincronizacao
         .catch(() => undefined)
-        .then(async () => {
-            const { error } = await supabase.rpc("substituir_estado_estoque", { p_estado: retrato });
-            if (error) throw error;
-        })
+        .then(sincronizarEstadoNoSupabase)
         .catch((error) => {
             console.error(error);
             notificar("Nao foi possivel salvar os dados no Supabase.", "erro");
@@ -525,8 +538,39 @@ function salvarEstado() {
     return filaSincronizacao;
 }
 
+async function gravarTabela(tabela, registros) {
+    if (!registros.length) return;
+    const { error } = await clienteSupabase.from(tabela).upsert(registros);
+    if (error) throw error;
+}
+
+function pedidoParaBanco(pedido) {
+    return { id: pedido.id, filial_id: pedido.filialId, observacao: pedido.observacao || "", observacao_matriz: pedido.observacaoMatriz || "", situacao: pedido.situacao, compra_prevista: pedido.compraPrevista || null, compra_recebida_em: pedido.compraRecebidaEm || null, entrega_prevista: pedido.entregaPrevista || null, recebido_em: pedido.recebidoEm || null, criado_em: pedido.criadoEm, analisado_em: pedido.analisadoEm || null };
+}
+
+function itensParaBanco(pedidos) {
+    return pedidos.flatMap((pedido) => itensDoPedido(pedido).map((item) => ({ pedido_id: pedido.id, produto_id: item.produtoId, estoque_informado: item.estoqueInformado, quantidade_solicitada: item.quantidadeSolicitada, observacao: item.observacao || "" })));
+}
+
+async function sincronizarEstadoNoSupabase() {
+    if (!perfilAtual) throw new Error("Sessão sem perfil de acesso.");
+    if (!usuarioEhCD()) {
+        const novos = estado.pedidos.filter((pedido) => pedido.filialId === perfilAtual.filial_id && !idsPedidosRemotos.has(pedido.id));
+        await gravarTabela("pedidos", novos.map(pedidoParaBanco));
+        await gravarTabela("pedido_itens", itensParaBanco(novos));
+        novos.forEach((pedido) => idsPedidosRemotos.add(pedido.id));
+        return;
+    }
+    await gravarTabela("filiais", estado.filiais);
+    await gravarTabela("produtos", estado.produtos.map((p) => ({ id: p.id, codigo: p.codigo, nome: p.nome, categoria: p.categoria, quantidade: p.quantidade, estoque_minimo: p.estoqueMinimo, unidade: p.unidade, ativo: p.ativo, criado_em: p.criadoEm, atualizado_em: p.atualizadoEm, arquivado_em: p.arquivadoEm || null })));
+    await gravarTabela("pedidos", estado.pedidos.map(pedidoParaBanco));
+    await gravarTabela("pedido_itens", itensParaBanco(estado.pedidos));
+    await gravarTabela("estoque_filiais", Object.entries(estado.estoqueFiliais).map(([chave, valor]) => { const [filial_id, produto_id] = chave.split(":"); return { filial_id, produto_id, quantidade: valor.quantidade, atualizado_em: valor.atualizadoEm }; }));
+    await gravarTabela("movimentacoes", estado.movimentacoes.map((m) => ({ id: m.id, produto_id: m.produtoId, tipo: m.tipo, quantidade: m.quantidade, saldo_antes: m.saldoAntes, saldo_depois: m.saldoDepois, observacao: m.observacao || "", filial_id: m.filialId || null, pedido_id: m.pedidoId || null, criado_em: m.criadoEm })));
+}
+
 async function carregarProdutosLegado() {
-    const {data, error} = await supabase
+    const {data, error} = await clienteSupabase
         .from("produtos")
         .select("*")
         .eq("ativo", true)
@@ -558,16 +602,16 @@ function produtoDoBanco(produto) {
 }
 
 async function carregarDadosSupabase() {
-    if (!supabase) {
+    if (!clienteSupabase) {
         notificar("Não foi possível carregar o Supabase. Verifique sua conexão e atualize a página.", "erro");
         return;
     }
     const [produtos, filiais, pedidos, estoques, movimentacoes] = await Promise.all([
-        supabase.from("produtos").select("*").order("nome"),
-        supabase.from("filiais").select("*").order("nome"),
-        supabase.from("pedidos").select("*, itens:pedido_itens(*)").order("criado_em", { ascending: false }),
-        supabase.from("estoque_filiais").select("*"),
-        supabase.from("movimentacoes").select("*").order("criado_em", { ascending: false })
+        clienteSupabase.from("produtos").select("*").order("nome"),
+        clienteSupabase.from("filiais").select("*").order("nome"),
+        clienteSupabase.from("pedidos").select("*, itens:pedido_itens(*)").order("criado_em", { ascending: false }),
+        clienteSupabase.from("estoque_filiais").select("*"),
+        clienteSupabase.from("movimentacoes").select("*").order("criado_em", { ascending: false })
     ]);
     const erro = [produtos, filiais, pedidos, estoques, movimentacoes].find((resultado) => resultado.error)?.error;
     if (erro) {
@@ -584,7 +628,7 @@ async function carregarDadosSupabase() {
         || estado.pedidos.length > 0
         || estado.movimentacoes.length > 0;
 
-    if (bancoEstaVazio && haDadosLocais) {
+    if (bancoEstaVazio && haDadosLocais && usuarioEhCD()) {
         await salvarEstado();
         renderizarTudo();
         notificar("Estoque local migrado para o Supabase.");
@@ -613,6 +657,7 @@ async function carregarDadosSupabase() {
             return { id: movimentacao.id, produtoId: movimentacao.produto_id, produtoNome: produto?.nome || "Produto nao identificado", tipo: movimentacao.tipo, quantidade: movimentacao.quantidade, unidade: produto?.unidade || "Unidade", saldoAntes: movimentacao.saldo_antes, saldoDepois: movimentacao.saldo_depois, observacao: movimentacao.observacao, filialId: movimentacao.filial_id || "", pedidoId: movimentacao.pedido_id || "", criadoEm: movimentacao.criado_em };
         })
     };
+    idsPedidosRemotos = new Set(estado.pedidos.map((pedido) => pedido.id));
     renderizarTudo();
 }
 
@@ -1618,8 +1663,8 @@ function limparDados() {
 
     if (!confirmou) return;
 
-    estado = { ...estadoPadrao(), demoDesativado: true };
-    salvarEstado();
+    localStorage.removeItem(STORAGE_KEY);
+    carregarDadosSupabase();
     produtoSelecionadoMovimentacao = "";
 
     renderizarTudo();
@@ -2050,6 +2095,11 @@ elementos.botaoEnviarPedidoLista.addEventListener("click", () => {
 });
 
 elementos.botaoIrAlertas.addEventListener("click", () => navegar(estaNoPortalFilial() ? "estoque-filial" : "estoque-baixo"));
+elementos.botaoSair.addEventListener("click", async () => {
+    if (!clienteSupabase) return;
+    await clienteSupabase.auth.signOut();
+    window.location.replace("./login.html");
+});
 elementos.botaoExportar.addEventListener("click", exportarBackup);
 elementos.arquivoImportar.addEventListener("change", importarBackup);
 elementos.botaoDadosDemo.addEventListener("click", carregarDadosDemo);
@@ -2058,7 +2108,31 @@ elementos.botaoLimparDados.addEventListener("click", limparDados);
 elementos.seletorPortal.value = portalAtual;
 navegar("dashboard");
 
-window.addEventListener("load", () => {
+async function iniciarAplicacaoAutenticada() {
+    if (!conectarSupabase()) { notificar("Não foi possível carregar o serviço do Supabase.", "erro"); return; }
+    const { data: { session } } = await clienteSupabase.auth.getSession();
+    if (!session) { window.location.replace("./login.html"); return; }
+    usuarioAtual = session.user;
+    const { data: perfil, error } = await clienteSupabase.from("usuarios").select("id, nome, papel, filial_id").single();
+    if (error || !perfil) { console.error(error); notificar("Perfil não encontrado. Execute usuarios-auth.sql e conclua o cadastro.", "erro"); return; }
+    perfilAtual = perfil;
+    aplicarPermissoesDoUsuario();
+    navegar(usuarioEhCD() ? "dashboard" : "portal-filial");
+    await carregarDadosSupabase();
+    clienteSupabase.channel("estoque-em-tempo-real")
+        .on("postgres_changes", { event: "*", schema: "public", table: "produtos" }, carregarDadosSupabase)
+        .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, carregarDadosSupabase)
+        .on("postgres_changes", { event: "*", schema: "public", table: "pedido_itens" }, carregarDadosSupabase)
+        .on("postgres_changes", { event: "*", schema: "public", table: "estoque_filiais" }, carregarDadosSupabase)
+        .on("postgres_changes", { event: "*", schema: "public", table: "movimentacoes" }, carregarDadosSupabase)
+        .subscribe();
+    clienteSupabase.auth.onAuthStateChange((_evento, sessao) => { if (!sessao) window.location.replace("./login.html"); });
+}
+
+window.addEventListener("online", () => carregarDadosSupabase());
+window.addEventListener("load", iniciarAplicacaoAutenticada);
+
+if (false) window.addEventListener("load", () => {
     if (conectarSupabase()) {
         carregarDadosSupabase();
     } else {

@@ -1,5 +1,12 @@
 # Estoque Therapeutica
 
+## Acesso e Supabase
+
+- O acesso é feito com e-mail e senha pelo Supabase Auth.
+- Execute primeiro `supabase/supabase-schema.sql` e depois `supabase/usuarios-auth.sql` no SQL Editor.
+- Cadastros novos entram como usuários de filial. Promova o primeiro administrador usando o comando comentado em `usuarios-auth.sql`.
+- O banco usa Row Level Security: filiais veem somente seu estoque e pedidos; administradores do CD administram o estoque global.
+
 Protótipo de controle do Centro de Distribuição (CD) da Therapeutica, criado com HTML, CSS e JavaScript puro.
 
 ## O que funciona nesta versão

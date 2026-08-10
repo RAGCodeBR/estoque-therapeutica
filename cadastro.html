@@ -13,10 +13,15 @@
 
         <hr>
 
-        <div class="div-cadastro">
+        <form class="div-cadastro" id="formulario-cadastro">
             <input type="text" id="usuario" placeholder="Nome de usuário" required>
 
             <input type="email" id="email" placeholder="E-mail" required>
+            <select id="filial" required aria-label="Filial">
+                <option value="" selected disabled>Selecione sua filial</option>
+                <option value="matriz">Matriz</option><option value="blumenau">Blumenau</option>
+                <option value="lucas">Lucas do Rio Verde</option><option value="sinop">Sinop</option>
+            </select>
 
             <div class="campo-senha">
                 <input type="password" id="senha" placeholder="Senha" required>
@@ -27,9 +32,12 @@
                 <button type="button" class="botao-olho fa fa-eye" id="verConfirmSenha" aria-label="Mostrar confirmação de senha"></button>
             </div>
             
-            <button type="submit" id="" class="botao-cadastrar" >Cadastrar</button>
-        </div>
+            <button type="submit" class="botao-cadastrar" id="botao-cadastrar">Cadastrar</button>
+            <p class="mensagem-autenticacao" id="mensagem-cadastro" role="status" aria-live="polite"></p>
+        </form>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'"></script>
+    <script src="./assets/js/supabase-client.js"></script>
     <script src="./assets/js/cadastro.js"></script>
 </body>
 </html>
