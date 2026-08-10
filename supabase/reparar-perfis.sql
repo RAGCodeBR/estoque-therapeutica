@@ -15,6 +15,14 @@ where not exists (
 )
 on conflict (id) do nothing;
 
+-- Restaura a permissão que permite a cada conta ler o próprio perfil.
+-- Necessária quando usuarios-auth.sql não foi concluído em uma execução anterior.
+alter table public.usuarios enable row level security;
+grant select on public.usuarios to authenticated;
+drop policy if exists "usuario le o proprio perfil" on public.usuarios;
+create policy "usuario le o proprio perfil" on public.usuarios
+for select to authenticated using (id = auth.uid());
+
 -- Consulte as contas e confirme qual e-mail será o administrador do CD.
 select u.id, u.email, p.nome, p.papel, p.filial_id
 from auth.users u

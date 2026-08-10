@@ -2336,7 +2336,10 @@ async function iniciarAplicacaoAutenticada() {
     const { data: { session } } = await clienteSupabase.auth.getSession();
     if (!session) { window.location.replace("./login.html"); return; }
     usuarioAtual = session.user;
-    const { data: perfil, error } = await clienteSupabase.from("usuarios").select("id, nome, papel, filial_id").single();
+    const { data: perfil, error } = await clienteSupabase.from("usuarios")
+        .select("id, nome, papel, filial_id")
+        .eq("id", usuarioAtual.id)
+        .single();
     if (error || !perfil) { console.error(error); notificar("Perfil não encontrado. Execute supabase/reparar-perfis.sql no SQL Editor e defina o administrador.", "erro"); return; }
     perfilAtual = perfil;
     aplicarPermissoesDoUsuario();
