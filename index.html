@@ -434,14 +434,15 @@
                         <div>
                             <p class="subtitulo-secao">Acesso ao sistema</p>
                             <h2>Usuários</h2>
-                            <p>Estrutura preparada para a futura autenticação segura.</p>
+                            <p>Gerencie os perfis, papéis e filiais vinculadas ao acesso.</p>
                         </div>
                     </div>
-                    <section class="cartao-informativo">
-                        <h3>Administrador do Centro de Distribuição</h3>
-                        <p>O acesso é protegido pelo Supabase Auth. Cada usuário possui um perfil e uma filial vinculada; as permissões são aplicadas diretamente no banco de dados.</p>
-                        <div class="papeis-usuario">
-                            <span>Administrador</span><span>Filial</span><span>Consulta</span>
+                    <section class="tabela-container">
+                        <div class="tabela-responsiva">
+                            <table>
+                                <thead><tr><th>Usuário</th><th>E-mail</th><th>Papel</th><th>Filial</th><th>Ação</th></tr></thead>
+                                <tbody id="tabela-usuarios"></tbody>
+                            </table>
                         </div>
                     </section>
                 </section>
@@ -614,6 +615,28 @@
                     <button type="button" class="botao-secundario" data-fechar-modal="modal-entrega">Cancelar</button>
                     <button type="submit" class="botao-principal" id="botao-confirmar-data">Aprovar envio</button>
                 </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-usuario" aria-hidden="true">
+        <div class="modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-usuario">
+            <div class="modal-cabecalho">
+                <div><p class="subtitulo-modal">Controle de acesso</p><h2 id="titulo-modal-usuario">Editar usuário</h2></div>
+                <button class="botao-fechar" type="button" data-fechar-modal="modal-usuario" aria-label="Fechar">×</button>
+            </div>
+            <form id="formulario-usuario" class="formulario-modal">
+                <input type="hidden" id="usuario-id">
+                <label for="usuario-email">E-mail</label>
+                <input type="email" id="usuario-email" disabled>
+                <label for="usuario-nome">Nome</label>
+                <input type="text" id="usuario-nome" maxlength="120" required>
+                <label for="usuario-papel">Papel</label>
+                <select id="usuario-papel" required><option value="filial">Filial</option><option value="cd_admin">Administrador do CD</option></select>
+                <label for="usuario-filial">Filial vinculada</label>
+                <select id="usuario-filial"><option value="">Sem filial</option><option value="matriz">Matriz</option><option value="blumenau">Blumenau</option><option value="lucas">Lucas do Rio Verde</option><option value="sinop">Sinop</option></select>
+                <p class="mensagem-formulario" id="mensagem-usuario" aria-live="polite"></p>
+                <div class="acoes-formulario"><button type="button" class="botao-secundario" data-fechar-modal="modal-usuario">Cancelar</button><button type="submit" class="botao-principal">Salvar alterações</button></div>
             </form>
         </div>
     </div>

@@ -7,6 +7,7 @@ let clienteSupabase = null;
 let usuarioAtual = null;
 let perfilAtual = null;
 let idsPedidosRemotos = new Set();
+let usuarios = [];
 
 function conectarSupabase() {
     if (!window.supabase?.createClient) return false;
@@ -59,6 +60,7 @@ const elementos = {
     buscaHistorico: document.querySelector("#busca-historico"),
     filtroHistorico: document.querySelector("#filtro-historico"),
     tabelaHistorico: document.querySelector("#tabela-historico"),
+    tabelaUsuarios: document.querySelector("#tabela-usuarios"),
     movimentoTitulo: document.querySelector("#movimentacao-titulo"),
     movimentoSubtitulo: document.querySelector("#movimentacao-subtitulo"),
     movimentoDescricao: document.querySelector("#movimentacao-descricao"),
@@ -126,7 +128,15 @@ const elementos = {
     mensagemPedidoFilial: document.querySelector("#mensagem-pedido-filial"),
     botaoLimparCarrinho: document.querySelector("#botao-limpar-carrinho"),
     botaoEnviarPedidoLista: document.querySelector("#botao-enviar-pedido-lista"),
-    listaMeusPedidos: document.querySelector("#lista-meus-pedidos")
+    listaMeusPedidos: document.querySelector("#lista-meus-pedidos"),
+    modalUsuario: document.querySelector("#modal-usuario"),
+    formularioUsuario: document.querySelector("#formulario-usuario"),
+    usuarioId: document.querySelector("#usuario-id"),
+    usuarioEmail: document.querySelector("#usuario-email"),
+    usuarioNome: document.querySelector("#usuario-nome"),
+    usuarioPapel: document.querySelector("#usuario-papel"),
+    usuarioFilial: document.querySelector("#usuario-filial"),
+    mensagemUsuario: document.querySelector("#mensagem-usuario")
 };
 
 let paginaAtual = "dashboard";
@@ -1137,6 +1147,17 @@ function renderizarHistorico() {
         : "<tr><td colspan=\"5\" class=\"tabela-vazia\">Nenhuma movimentação encontrada.</td></tr>";
 }
 
+function renderizarUsuarios() {
+    if (!elementos.tabelaUsuarios) return;
+    elementos.tabelaUsuarios.innerHTML = usuarios.length
+        ? usuarios.map((usuario) => {
+            const filial = usuario.filial_id ? (buscarFilial(usuario.filial_id)?.nome || usuario.filial_id) : "—";
+            const papel = usuario.papel === "cd_admin" ? "Administrador" : "Filial";
+            return `<tr><td>${escaparHTML(usuario.nome || "Sem nome")}</td><td>${escaparHTML(usuario.email)}</td><td><span class="selo-tipo ${usuario.papel === "cd_admin" ? "tipo-aprovado" : "tipo-pendente"}">${papel}</span></td><td>${escaparHTML(filial)}</td><td><button type="button" class="botao-acao" data-acao="editar-usuario" data-usuario-id="${usuario.id}">Editar</button></td></tr>`;
+        }).join("")
+        : "<tr><td colspan=\"5\" class=\"tabela-vazia\">Nenhum usuário encontrado.</td></tr>";
+}
+
 function renderizarPortalFilial() {
     const filial = filialAtual();
 
@@ -1246,7 +1267,30 @@ function renderizarTudo() {
     renderizarPedidos();
     renderizarFiliais();
     renderizarHistorico();
+    renderizarUsuarios();
     renderizarPortalFilial();
+}
+
+async function carregarUsuarios() {
+    if (!usuarioEhCD()) return;
+    const { data, error } = await clienteSupabase.rpc("listar_usuarios");
+    if (error) { console.error(error); notificar("Não foi possível carregar os usuários. Execute usuarios-admin.sql.", "erro"); return; }
+    usuarios = data || [];
+    renderizarUsuarios();
+}
+
+function abrirModalUsuario(id) {
+    const usuario = usuarios.find((item) => item.id === id);
+    if (!usuario) return;
+    elementos.formularioUsuario.reset();
+    elementos.mensagemUsuario.textContent = "";
+    elementos.usuarioId.value = usuario.id;
+    elementos.usuarioEmail.value = usuario.email;
+    elementos.usuarioNome.value = usuario.nome || "";
+    elementos.usuarioPapel.value = usuario.papel;
+    elementos.usuarioFilial.value = usuario.filial_id || "";
+    elementos.usuarioFilial.disabled = usuario.papel === "cd_admin";
+    abrirModal(elementos.modalUsuario);
 }
 
 function abrirModalProduto(produtoId = "") {
@@ -1710,6 +1754,9 @@ function lidarComAcao(acao, elemento) {
         case "editar-produto":
             abrirModalProduto(elemento.dataset.produtoId);
             break;
+        case "editar-usuario":
+            abrirModalUsuario(elemento.dataset.usuarioId);
+            break;
         case "arquivar-produto":
             arquivarProduto(elemento.dataset.produtoId);
             break;
@@ -1776,7 +1823,7 @@ document.addEventListener("click", (evento) => {
     }
 });
 
-[elementos.modalProduto, elementos.modalPedido, elementos.modalEntrega].forEach((modal) => {
+[elementos.modalProduto, elementos.modalPedido, elementos.modalEntrega, elementos.modalUsuario].forEach((modal) => {
     modal.addEventListener("click", (evento) => {
         if (evento.target === modal) fecharModal(modal);
     });
@@ -1787,6 +1834,7 @@ document.addEventListener("keydown", (evento) => {
         fecharModal(elementos.modalProduto);
         fecharModal(elementos.modalPedido);
         fecharModal(elementos.modalEntrega);
+        fecharModal(elementos.modalUsuario);
     }
 });
 
@@ -2100,6 +2148,24 @@ elementos.botaoSair.addEventListener("click", async () => {
     await clienteSupabase.auth.signOut();
     window.location.replace("./login.html");
 });
+
+elementos.usuarioPapel.addEventListener("change", () => {
+    const administrador = elementos.usuarioPapel.value === "cd_admin";
+    elementos.usuarioFilial.disabled = administrador;
+    if (administrador) elementos.usuarioFilial.value = "";
+});
+
+elementos.formularioUsuario.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    const papel = elementos.usuarioPapel.value;
+    const filialId = papel === "cd_admin" ? null : elementos.usuarioFilial.value;
+    if (papel === "filial" && !filialId) { elementos.mensagemUsuario.textContent = "Selecione a filial do usuário."; return; }
+    const { error } = await clienteSupabase.from("usuarios").update({ nome: elementos.usuarioNome.value.trim(), papel, filial_id: filialId }).eq("id", elementos.usuarioId.value);
+    if (error) { console.error(error); elementos.mensagemUsuario.textContent = "Não foi possível salvar as alterações."; return; }
+    fecharModal(elementos.modalUsuario);
+    notificar("Usuário atualizado.");
+    await carregarUsuarios();
+});
 elementos.botaoExportar.addEventListener("click", exportarBackup);
 elementos.arquivoImportar.addEventListener("change", importarBackup);
 elementos.botaoDadosDemo.addEventListener("click", carregarDadosDemo);
@@ -2119,6 +2185,7 @@ async function iniciarAplicacaoAutenticada() {
     aplicarPermissoesDoUsuario();
     navegar(usuarioEhCD() ? "dashboard" : "portal-filial");
     await carregarDadosSupabase();
+    await carregarUsuarios();
     clienteSupabase.channel("estoque-em-tempo-real")
         .on("postgres_changes", { event: "*", schema: "public", table: "produtos" }, carregarDadosSupabase)
         .on("postgres_changes", { event: "*", schema: "public", table: "pedidos" }, carregarDadosSupabase)
