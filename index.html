@@ -318,7 +318,7 @@
                         <div>
                             <p class="subtitulo-secao">Solicitação para o CD</p>
                             <h2>Novo pedido</h2>
-                            <p>Monte uma lista. Para cada produto, informe obrigatoriamente o estoque atual da filial.</p>
+                            <p>Monte uma lista. O estoque atual de cada produto é preenchido automaticamente conforme o estoque da filial.</p>
                         </div>
                     </div>
 
@@ -331,7 +331,7 @@
                             <div class="campos-lado-a-lado">
                                 <div>
                                     <label for="item-pedido-estoque">Estoque atual na filial</label>
-                                    <input type="number" id="item-pedido-estoque" min="0" step="1" placeholder="0" required>
+                                    <input type="number" id="item-pedido-estoque" min="0" step="1" placeholder="0" readonly aria-readonly="true" required>
                                 </div>
                                 <div>
                                     <label for="item-pedido-quantidade">Quantidade solicitada</label>

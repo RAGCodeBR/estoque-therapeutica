@@ -823,6 +823,12 @@ function chaveEstoqueFilial(filialId, produtoId) {
     return `${filialId}:${produtoId}`;
 }
 
+function quantidadeEstoqueFilial(filialId, produtoId) {
+    if (!filialId || !produtoId) return 0;
+    const registro = estado.estoqueFiliais[chaveEstoqueFilial(filialId, produtoId)];
+    return numeroInteiroNaoNegativo(registro?.quantidade ?? registro);
+}
+
 function situacaoProduto(produto) {
     if (produto.quantidade === 0) {
         return { texto: "Sem estoque", classe: "status-sem-estoque" };
@@ -1286,6 +1292,7 @@ function renderizarPortalFilial() {
     }
 
     elementos.itemPedidoProduto.disabled = produtos.length === 0;
+    atualizarEstoqueAtualDoItemPedido();
     renderizarCarrinhoPedido();
 
     elementos.listaMeusPedidos.innerHTML = pedidosDaFilial.length
@@ -1334,6 +1341,14 @@ function renderizarCarrinhoPedido() {
             </div>
         `).join("")
         : "<p class=\"resumo-vazio\">Adicione produtos para montar a lista do pedido.</p>";
+}
+
+function atualizarEstoqueAtualDoItemPedido() {
+    const filial = filialAtual();
+    const produtoId = elementos.itemPedidoProduto.value;
+    elementos.itemPedidoEstoque.value = filial && produtoId
+        ? String(quantidadeEstoqueFilial(filial.id, produtoId))
+        : "";
 }
 
 function renderizarTudo() {
@@ -1714,7 +1729,7 @@ function marcarAguardandoCompra(pedidoId, dataCompra) {
     notificar("Pedido marcado como aguardando compra.");
 }
 
-function recusarPedido(pedidoId) {
+async function recusarPedido(pedidoId) {
     const pedido = estado.pedidos.find((item) => item.id === pedidoId);
 
     if (!pedido || !["pendente", "aguardando_compra"].includes(pedido.situacao)) return;
@@ -1723,9 +1738,41 @@ function recusarPedido(pedidoId) {
 
     if (motivo === null) return;
 
+    const observacaoMatriz = motivo.trim() || "Pedido recusado pelo CD.";
+    const analisadoEm = new Date().toISOString();
+
+    if (clienteSupabase && usuarioEhCD()) {
+        const { data, error } = await clienteSupabase.from("pedidos")
+            .update({
+                situacao: "recusado",
+                observacao_matriz: observacaoMatriz,
+                analisado_em: analisadoEm,
+                atualizado_em: analisadoEm
+            })
+            .eq("id", pedido.id)
+            .eq("atualizado_em", pedido.atualizadoEm)
+            .select("id");
+
+        if (error) {
+            console.error(error);
+            notificar(`Não foi possível recusar o pedido: ${error.message}`, "erro");
+            return;
+        }
+
+        if (!data?.length) {
+            await carregarDadosSupabase();
+            notificar("O pedido foi alterado por outra sessão. Os dados foram atualizados; tente novamente.", "erro");
+            return;
+        }
+
+        await carregarDadosSupabase();
+        notificar("Pedido recusado.");
+        return;
+    }
+
     pedido.situacao = "recusado";
-    pedido.observacaoMatriz = motivo.trim() || "Pedido recusado pelo CD.";
-    pedido.analisadoEm = new Date().toISOString();
+    pedido.observacaoMatriz = observacaoMatriz;
+    pedido.analisadoEm = analisadoEm;
     salvarEstado();
     renderizarTudo();
     notificar("Pedido recusado.");
@@ -2134,16 +2181,19 @@ elementos.seletorPortal.addEventListener("change", () => {
     navegar(estaNoPortalFilial() ? "portal-filial" : "dashboard");
 });
 
+elementos.itemPedidoProduto.addEventListener("change", atualizarEstoqueAtualDoItemPedido);
+
 elementos.formularioItemPedido.addEventListener("submit", (evento) => {
     evento.preventDefault();
+    const filial = filialAtual();
     const produto = buscarProduto(elementos.itemPedidoProduto.value);
-    const estoqueInformado = Number(elementos.itemPedidoEstoque.value);
+    const estoqueInformado = filial && produto ? quantidadeEstoqueFilial(filial.id, produto.id) : null;
     const quantidadeSolicitada = Number(elementos.itemPedidoQuantidade.value);
     const observacao = elementos.itemPedidoObservacao.value.trim();
 
     elementos.mensagemItemPedido.textContent = "";
 
-    if (!filialAtual() || !produto || !produto.ativo) {
+    if (!filial || !produto || !produto.ativo) {
         elementos.mensagemItemPedido.textContent = "Selecione um produto válido.";
         return;
     }
@@ -2168,6 +2218,7 @@ elementos.formularioItemPedido.addEventListener("submit", (evento) => {
     });
 
     elementos.formularioItemPedido.reset();
+    atualizarEstoqueAtualDoItemPedido();
     renderizarCarrinhoPedido();
 });
 
@@ -2177,7 +2228,7 @@ elementos.botaoLimparCarrinho.addEventListener("click", () => {
     renderizarCarrinhoPedido();
 });
 
-elementos.botaoEnviarPedidoLista.addEventListener("click", () => {
+elementos.botaoEnviarPedidoLista.addEventListener("click", async () => {
     const filial = filialAtual();
     const observacao = elementos.observacaoPedidoCompleto.value.trim();
 
@@ -2193,10 +2244,13 @@ elementos.botaoEnviarPedidoLista.addEventListener("click", () => {
         return;
     }
 
-    const itens = itensDoPedidoAtual.map((item) => ({ ...item }));
+    const itens = itensDoPedidoAtual.map((item) => ({
+        ...item,
+        estoqueInformado: quantidadeEstoqueFilial(filial.id, item.produtoId)
+    }));
     const agora = new Date().toISOString();
 
-    estado.pedidos.unshift({
+    const pedido = {
         id: gerarId("ped"),
         filialId: filial.id,
         itens,
@@ -2206,14 +2260,36 @@ elementos.botaoEnviarPedidoLista.addEventListener("click", () => {
         criadoEm: agora,
         analisadoEm: null,
         atualizadoEm: agora
-    });
+    };
 
-    itens.forEach((item) => {
-        estado.estoqueFiliais[chaveEstoqueFilial(filial.id, item.produtoId)] = {
-            quantidade: item.estoqueInformado,
-            atualizadoEm: agora
-        };
-    });
+    if (clienteSupabase && !usuarioEhCD()) {
+        const { error: erroPedido } = await clienteSupabase.from("pedidos").insert(pedidoParaBanco(pedido));
+
+        if (erroPedido) {
+            console.error(erroPedido);
+            elementos.mensagemPedidoFilial.textContent = `Não foi possível enviar o pedido: ${erroPedido.message}`;
+            return;
+        }
+
+        const { error: erroItens } = await clienteSupabase.from("pedido_itens").upsert(itensParaBanco([pedido]));
+
+        if (erroItens) {
+            console.error(erroItens);
+            elementos.mensagemPedidoFilial.textContent = `O pedido foi criado, mas os itens não puderam ser gravados: ${erroItens.message}`;
+            await carregarDadosSupabase();
+            return;
+        }
+
+        idsPedidosRemotos.add(pedido.id);
+        itensDoPedidoAtual = [];
+        elementos.observacaoPedidoCompleto.value = "";
+        await carregarDadosSupabase();
+        notificar("Lista de pedido enviada para o CD.");
+        navegar("meus-pedidos");
+        return;
+    }
+
+    estado.pedidos.unshift(pedido);
 
     itensDoPedidoAtual = [];
     elementos.observacaoPedidoCompleto.value = "";
