@@ -590,6 +590,12 @@
                 <input type="hidden" id="entrega-modo">
                 <p class="texto-apoio" id="entrega-resumo">Selecione quando a filial deve receber este pedido.</p>
 
+                <label id="campo-entrega-quantidade" for="entrega-quantidade" hidden>
+                    Quantidade a enviar
+                    <input type="number" id="entrega-quantidade" min="1" step="1" required>
+                    <small id="ajuda-entrega-quantidade"></small>
+                </label>
+
                 <div class="data-entrega-grid">
                     <label for="entrega-dia">
                         <span>Dia</span>

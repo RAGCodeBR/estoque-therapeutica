@@ -109,6 +109,9 @@ const elementos = {
     entregaPedidoId: document.querySelector("#entrega-pedido-id"),
     entregaModo: document.querySelector("#entrega-modo"),
     entregaResumo: document.querySelector("#entrega-resumo"),
+    campoEntregaQuantidade: document.querySelector("#campo-entrega-quantidade"),
+    entregaQuantidade: document.querySelector("#entrega-quantidade"),
+    ajudaEntregaQuantidade: document.querySelector("#ajuda-entrega-quantidade"),
     entregaDia: document.querySelector("#entrega-dia"),
     entregaMes: document.querySelector("#entrega-mes"),
     entregaAno: document.querySelector("#entrega-ano"),
@@ -659,7 +662,7 @@ function pedidoParaBanco(pedido) {
 }
 
 function itensParaBanco(pedidos) {
-    return pedidos.flatMap((pedido) => itensDoPedido(pedido).map((item) => ({ pedido_id: pedido.id, produto_id: item.produtoId, estoque_informado: item.estoqueInformado, quantidade_solicitada: item.quantidadeSolicitada, observacao: item.observacao || "", situacao: item.situacao || pedido.situacao || "pendente", observacao_matriz: item.observacaoMatriz || "", recebido_em: item.recebidoEm || null })));
+    return pedidos.flatMap((pedido) => itensDoPedido(pedido).map((item) => ({ pedido_id: pedido.id, produto_id: item.produtoId, estoque_informado: item.estoqueInformado, quantidade_solicitada: item.quantidadeSolicitada, quantidade_enviada: item.quantidadeEnviada || null, observacao: item.observacao || "", situacao: item.situacao || pedido.situacao || "pendente", observacao_matriz: item.observacaoMatriz || "", recebido_em: item.recebidoEm || null })));
 }
 
 async function sincronizarEstadoNoSupabase() {
@@ -771,7 +774,7 @@ async function carregarDadosSupabase() {
             id: pedido.id, filialId: pedido.filial_id,
             itens: pedido.itens.map((item) => {
                 const produto = produtosPorId.get(item.produto_id);
-                return { produtoId: item.produto_id, produtoNome: produto?.nome || "Produto nao identificado", unidade: produto?.unidade || "Unidade", estoqueInformado: item.estoque_informado, quantidadeSolicitada: item.quantidade_solicitada, observacao: item.observacao, situacao: item.situacao || pedido.situacao, observacaoMatriz: item.observacao_matriz || "", recebidoEm: item.recebido_em || null };
+                return { produtoId: item.produto_id, produtoNome: produto?.nome || "Produto nao identificado", unidade: produto?.unidade || "Unidade", estoqueInformado: item.estoque_informado, quantidadeSolicitada: item.quantidade_solicitada, quantidadeEnviada: item.quantidade_enviada || null, observacao: item.observacao, situacao: item.situacao || pedido.situacao, observacaoMatriz: item.observacao_matriz || "", recebidoEm: item.recebido_em || null };
             }),
             observacao: pedido.observacao, observacaoMatriz: pedido.observacao_matriz, situacao: pedido.situacao,
             compraPrevista: pedido.compra_prevista || "", compraRecebidaEm: pedido.compra_recebida_em,
@@ -1392,7 +1395,7 @@ function abrirModalAnalisarPedido(pedidoId) {
             : situacao === "aguardando_compra"
                 ? `<div class="acoes-tabela"><button type="button" class="botao-acao acao-aprovar" data-acao="receber-compra-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Receber compra</button><button type="button" class="botao-acao acao-perigo" data-acao="recusar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Recusar</button></div>`
                 : "";
-        return `<article class="item-analise-pedido"><div class="item-analise-informacoes"><strong>${escaparHTML(item.produtoNome)}</strong><span>Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span>${item.observacaoMatriz ? `<span>${escaparHTML(item.observacaoMatriz)}</span>` : ""}</div><div class="item-analise-acoes"><span class="selo-tipo ${classeSituacaoPedido(situacao)}">${textoSituacaoPedido(situacao)}</span>${acoes}</div></article>`;
+        return `<article class="item-analise-pedido"><div class="item-analise-informacoes"><strong>${escaparHTML(item.produtoNome)}</strong><span>Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span><span>Estoque informado pela filial: ${formatarNumero(item.estoqueInformado)} ${escaparHTML(item.unidade)}</span>${item.observacaoMatriz ? `<span>${escaparHTML(item.observacaoMatriz)}</span>` : ""}</div><div class="item-analise-acoes"><span class="selo-tipo ${classeSituacaoPedido(situacao)}">${textoSituacaoPedido(situacao)}</span>${acoes}</div></article>`;
     }).join("");
     abrirModal(elementos.modalAnalisarPedido);
 }
@@ -1729,6 +1732,19 @@ function configurarModalDataPedido(pedido, modo) {
     elementos.entregaResumo.textContent = textos.resumo;
     elementos.botaoConfirmarData.textContent = textos.botao;
     elementos.mensagemEntrega.textContent = "";
+
+    const itemUnico = modo === "entrega" && itens.length === 1;
+    elementos.campoEntregaQuantidade.hidden = !itemUnico;
+    elementos.entregaQuantidade.required = itemUnico;
+    if (itemUnico) {
+        const item = itens[0];
+        const produto = buscarProduto(item.produtoId);
+        const maximo = Math.min(item.quantidadeSolicitada, produto?.quantidade || 0);
+        elementos.entregaQuantidade.min = "1";
+        elementos.entregaQuantidade.max = String(maximo);
+        elementos.entregaQuantidade.value = String(maximo);
+        elementos.ajudaEntregaQuantidade.textContent = `Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${item.unidade}. Disponível no CD: ${formatarNumero(produto?.quantidade || 0)} ${item.unidade}.`;
+    }
     preencherSeletoresEntrega(new Date());
     abrirModal(elementos.modalEntrega);
     setTimeout(() => elementos.entregaDia.focus(), 0);
@@ -1742,7 +1758,7 @@ function abrirModalEntrega(pedidoId) {
     const itens = itensEmAcao(pedido).filter((item) => (item.situacao || pedido.situacao) === "pendente");
     const itensIndisponiveis = itens.filter((item) => {
         const produto = buscarProduto(item.produtoId);
-        return !produto || !produto.ativo || produto.quantidade < item.quantidadeSolicitada;
+        return !produto || !produto.ativo || produto.quantidade <= 0;
     });
 
     if (itensIndisponiveis.length) {
@@ -1793,15 +1809,27 @@ function arquivarProduto(produtoId) {
     notificar("Produto arquivado. O histórico foi preservado.");
 }
 
-function aprovarPedido(pedidoId, dataEntrega) {
+function aprovarPedido(pedidoId, dataEntrega, quantidadeSelecionada = null) {
     const pedido = estado.pedidos.find((item) => item.id === pedidoId);
 
     if (!pedido || !itensEmAcao(pedido).some((item) => (item.situacao || pedido.situacao) === "pendente")) return;
 
     const itens = itensEmAcao(pedido).filter((item) => (item.situacao || pedido.situacao) === "pendente");
+    const quantidadesParaEnviar = new Map(itens.map((item) => [item.produtoId, item.quantidadeSolicitada]));
+    if (itens.length === 1 && quantidadeSelecionada !== null) {
+        const quantidade = Number(quantidadeSelecionada);
+        const item = itens[0];
+        const produto = buscarProduto(item.produtoId);
+        if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > item.quantidadeSolicitada || quantidade > (produto?.quantidade || 0)) {
+            elementos.mensagemEntrega.textContent = "Informe uma quantidade disponível entre 1 e o total solicitado.";
+            return;
+        }
+        quantidadesParaEnviar.set(item.produtoId, quantidade);
+    }
+
     const itensIndisponiveis = itens.filter((item) => {
         const produto = buscarProduto(item.produtoId);
-        return !produto || !produto.ativo || produto.quantidade < item.quantidadeSolicitada;
+        return !produto || !produto.ativo || produto.quantidade < quantidadesParaEnviar.get(item.produtoId);
     });
 
     if (itensIndisponiveis.length) {
@@ -1819,7 +1847,10 @@ function aprovarPedido(pedidoId, dataEntrega) {
 
     if (!confirmou) return;
 
-    itens.forEach((item) => { item.situacao = "em_transito"; });
+    itens.forEach((item) => {
+        item.situacao = "em_transito";
+        item.quantidadeEnviada = quantidadesParaEnviar.get(item.produtoId);
+    });
     atualizarSituacaoDoPedido(pedido);
     pedido.entregaPrevista = dataEntrega;
     pedido.recebidoEm = null;
@@ -1830,13 +1861,13 @@ function aprovarPedido(pedidoId, dataEntrega) {
         const produto = buscarProduto(item.produtoId);
         const saldoAntes = produto.quantidade;
 
-        produto.quantidade -= item.quantidadeSolicitada;
+        produto.quantidade -= item.quantidadeEnviada;
         produto.atualizadoEm = new Date().toISOString();
 
         registrarMovimentacao({
             produto,
             tipo: "transferencia",
-            quantidade: item.quantidadeSolicitada,
+            quantidade: item.quantidadeEnviada,
             saldoAntes,
             saldoDepois: produto.quantidade,
             observacao: item.observacao || pedido.observacao || `Envio aprovado para entrega em ${formatarDataSimples(dataEntrega)}.`,
@@ -1946,7 +1977,7 @@ function abrirModalDetalhesPedido(pedidoId) {
     elementos.listaDetalhesPedido.innerHTML = itensDoPedido(pedido).map((item) => {
         const situacao = item.situacao || pedido.situacao || "pendente";
         const foiEnviado = ["em_transito", "recebido"].includes(situacao);
-        const quantidadeEnviada = foiEnviado ? item.quantidadeSolicitada : 0;
+        const quantidadeEnviada = foiEnviado ? (item.quantidadeEnviada || item.quantidadeSolicitada) : 0;
         const confirmadoEm = item.recebidoEm || (situacao === "recebido" ? pedido.recebidoEm : null);
         const descricao = foiEnviado
             ? situacao === "recebido" ? "Recebido pela filial." : "Enviado pelo CD e aguardando confirmação."
@@ -1960,6 +1991,7 @@ function abrirModalDetalhesPedido(pedidoId) {
                 <div>
                     <strong>${escaparHTML(item.produtoNome)}</strong>
                     <span>Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)} · Enviado: ${formatarNumero(quantidadeEnviada)} ${escaparHTML(item.unidade)}</span>
+                    <span>Estoque informado pela filial: ${formatarNumero(item.estoqueInformado)} ${escaparHTML(item.unidade)}</span>
                     <span>${escaparHTML(descricao)}</span>
                 </div>
                 <div class="acoes-item-detalhes">
@@ -1998,7 +2030,7 @@ async function confirmarRecebimentoItem(pedidoId, produtoId) {
     const chave = chaveEstoqueFilial(pedido.filialId, produto.id);
     const registroAtual = estado.estoqueFiliais[chave];
     const saldoAtual = numeroInteiroNaoNegativo(registroAtual?.quantidade ?? registroAtual ?? item.estoqueInformado);
-    estado.estoqueFiliais[chave] = { quantidade: saldoAtual + item.quantidadeSolicitada, atualizadoEm: agora };
+    estado.estoqueFiliais[chave] = { quantidade: saldoAtual + (item.quantidadeEnviada || item.quantidadeSolicitada), atualizadoEm: agora };
     item.situacao = "recebido";
     item.recebidoEm = agora;
     atualizarSituacaoDoPedido(pedido);
@@ -2667,7 +2699,7 @@ elementos.formularioEntrega.addEventListener("submit", (evento) => {
         return;
     }
 
-    aprovarPedido(elementos.entregaPedidoId.value, dataSelecionada);
+    aprovarPedido(elementos.entregaPedidoId.value, dataSelecionada, elementos.campoEntregaQuantidade.hidden ? null : elementos.entregaQuantidade.value);
 });
 
 elementos.seletorPortal.addEventListener("change", () => {
