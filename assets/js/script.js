@@ -115,7 +115,6 @@ const elementos = {
     modalAnalisarPedido: document.querySelector("#modal-analisar-pedido"),
     tituloModalAnalisarPedido: document.querySelector("#titulo-modal-analisar-pedido"),
     listaAnalisarPedido: document.querySelector("#lista-analisar-pedido"),
-    botaoIrAlertas: document.querySelector("#botao-ir-alertas"),
     botaoSair: document.querySelector("#botao-sair"),
     botaoExportar: document.querySelector("#botao-exportar"),
     arquivoImportar: document.querySelector("#arquivo-importar"),
@@ -2685,7 +2684,6 @@ elementos.botaoEnviarPedidoLista.addEventListener("click", async () => {
     navegar("meus-pedidos");
 });
 
-elementos.botaoIrAlertas.addEventListener("click", () => navegar("estoque-baixo"));
 elementos.botaoSair.addEventListener("click", async () => {
     if (!clienteSupabase) return;
     await clienteSupabase.auth.signOut();
