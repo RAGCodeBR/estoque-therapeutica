@@ -974,6 +974,37 @@ tbody tr:last-child td {
     font-size: 12px;
 }
 
+.filtros-status-pedidos {
+    display: flex;
+    width: fit-content;
+    padding: 0;
+    margin: 0 0 16px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+}
+
+.filtros-status-pedidos label {
+    flex-direction: row;
+    align-items: center;
+    gap: 9px;
+    color: var(--marrom-claro);
+    font-size: 12px;
+}
+
+.filtros-status-pedidos select {
+    width: auto;
+    min-width: 156px;
+    padding: 8px 30px 8px 10px;
+    background: var(--branco);
+    font-size: 13px;
+}
+
+.item-pedido-resumo .motivo-recusa-pedido {
+    color: var(--vermelho);
+    font-weight: 700;
+}
+
 .acoes-pedido-filial {
     display: flex;
     flex-wrap: wrap;

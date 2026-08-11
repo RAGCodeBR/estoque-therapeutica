@@ -251,6 +251,17 @@
                         </div>
                         <p class="aviso-fluxo">Pedidos são criados pelos portais das filiais e podem conter vários itens.</p>
                     </div>
+                    <div class="filtros filtros-status-pedidos">
+                        <label for="filtro-status-pedidos">Filtrar por status
+                            <select id="filtro-status-pedidos">
+                                <option value="">Todos os status</option>
+                                <option value="recusado">Recusado</option>
+                                <option value="aguardando_compra">Aguardando compra</option>
+                                <option value="em_transito">A caminho</option>
+                                <option value="recebido">Recebido</option>
+                            </select>
+                        </label>
+                    </div>
                     <section class="tabela-container">
                         <div class="tabela-responsiva">
                             <table>
@@ -346,6 +357,17 @@
                             <h2>Meus pedidos</h2>
                             <p>Veja as listas enviadas e a resposta do CD.</p>
                         </div>
+                    </div>
+                    <div class="filtros filtros-status-pedidos">
+                        <label for="filtro-status-meus-pedidos">Filtrar por status
+                            <select id="filtro-status-meus-pedidos">
+                                <option value="">Todos os status</option>
+                                <option value="recusado">Recusado</option>
+                                <option value="aguardando_compra">Aguardando compra</option>
+                                <option value="em_transito">A caminho</option>
+                                <option value="recebido">Recebido</option>
+                            </select>
+                        </label>
                     </div>
                     <div id="lista-meus-pedidos" class="lista-pedidos-filial"></div>
                 </section>

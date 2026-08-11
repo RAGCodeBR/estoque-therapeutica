@@ -3,6 +3,7 @@ const LEGACY_PRODUCTS_KEY = "produtos-therapeutica";
 const LEGACY_MOVEMENTS_KEY = "movimentacoes-therapeutica";
 const LEGACY_STORAGE_KEYS = ["therapeutica-estoque-v3"];
 const CENTRO_DISTRIBUICAO_ID = "cd";
+const NAVEGACAO_STORAGE_KEY = "therapeutica-navegacao-atual";
 let clienteSupabase = null;
 let usuarioAtual = null;
 let perfilAtual = null;
@@ -56,6 +57,7 @@ const elementos = {
     tabelaProdutos: document.querySelector("#tabela-produtos"),
     tabelaEstoqueBaixo: document.querySelector("#tabela-estoque-baixo"),
     tabelaPedidos: document.querySelector("#tabela-pedidos"),
+    filtroStatusPedidos: document.querySelector("#filtro-status-pedidos"),
     notificacaoPedidos: document.querySelector("#notificacao-pedidos"),
     listaFiliais: document.querySelector("#lista-filiais"),
     buscaHistorico: document.querySelector("#busca-historico"),
@@ -135,6 +137,7 @@ const elementos = {
     botaoLimparCarrinho: document.querySelector("#botao-limpar-carrinho"),
     botaoEnviarPedidoLista: document.querySelector("#botao-enviar-pedido-lista"),
     listaMeusPedidos: document.querySelector("#lista-meus-pedidos"),
+    filtroStatusMeusPedidos: document.querySelector("#filtro-status-meus-pedidos"),
     modalUsuario: document.querySelector("#modal-usuario"),
     formularioUsuario: document.querySelector("#formulario-usuario"),
     usuarioId: document.querySelector("#usuario-id"),
@@ -167,6 +170,24 @@ let filaSincronizacao = Promise.resolve();
 
 function usuarioEhCD() {
     return perfilAtual?.papel === "cd_admin";
+}
+
+function salvarNavegacaoAtual() {
+    if (!perfilAtual) return;
+    localStorage.setItem(NAVEGACAO_STORAGE_KEY, JSON.stringify({
+        pagina: paginaAtual,
+        portal: portalAtual,
+        tipoMovimentacao: tipoMovimentacaoAtual
+    }));
+}
+
+function recuperarNavegacaoAtual() {
+    try {
+        const navegacao = JSON.parse(localStorage.getItem(NAVEGACAO_STORAGE_KEY) || "null");
+        return navegacao && typeof navegacao === "object" ? navegacao : null;
+    } catch {
+        return null;
+    }
 }
 
 function aplicarPermissoesDoUsuario() {
@@ -1139,6 +1160,8 @@ function navegar(pagina, opcoes = {}) {
         item.classList.toggle("pagina-ativa", item.id === `pagina-${paginaAtual}`);
     });
 
+    salvarNavegacaoAtual();
+
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -1318,7 +1341,10 @@ function renderizarEstoqueBaixo() {
 }
 
 function renderizarPedidos() {
-    const pedidos = [...estado.pedidos].sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
+    const statusSelecionado = elementos.filtroStatusPedidos.value;
+    const pedidos = [...estado.pedidos]
+        .filter((pedido) => !statusSelecionado || pedido.situacao === statusSelecionado)
+        .sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
 
     elementos.tabelaPedidos.innerHTML = pedidos.length
         ? pedidos.map((pedido) => {
@@ -1447,6 +1473,7 @@ function renderizarPortalFilial() {
 
     if (!filial) return;
 
+    const statusSelecionado = elementos.filtroStatusMeusPedidos.value;
     const pedidosDaFilial = estado.pedidos.filter((pedido) => pedido.filialId === filial.id);
     const abertos = pedidosDaFilial.filter((pedido) => ["pendente", "aguardando_compra", "em_transito"].includes(pedido.situacao)).length;
 
@@ -1467,8 +1494,9 @@ function renderizarPortalFilial() {
     atualizarEstoqueAtualDoItemPedido();
     renderizarCarrinhoPedido();
 
-    elementos.listaMeusPedidos.innerHTML = pedidosDaFilial.length
-        ? pedidosDaFilial.sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm)).map((pedido) => {
+    const pedidosFiltrados = pedidosDaFilial.filter((pedido) => !statusSelecionado || pedido.situacao === statusSelecionado);
+    elementos.listaMeusPedidos.innerHTML = pedidosFiltrados.length
+        ? pedidosFiltrados.sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm)).map((pedido) => {
             const compra = pedido.compraPrevista ? formatarDataSimples(pedido.compraPrevista) : "";
             const entrega = pedido.entregaPrevista ? formatarDataSimples(pedido.entregaPrevista) : "";
             return `
@@ -1481,12 +1509,17 @@ function renderizarPortalFilial() {
                         <span class="selo-tipo ${classeSituacaoPedido(pedido.situacao)}">${textoSituacaoPedido(pedido.situacao)}</span>
                     </div>
                     <div class="itens-pedido-resumo">
-                        ${itensDoPedido(pedido).map((item) => `
-                            <div class="item-pedido-resumo">
-                                <strong>${escaparHTML(item.produtoNome)}</strong>
-                                <span>Estoque informado: ${formatarNumero(item.estoqueInformado)} · Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span>
-                            </div>
-                        `).join("")}
+                        ${itensDoPedido(pedido).map((item) => {
+                            const situacaoItem = item.situacao || pedido.situacao;
+                            const motivoRecusa = item.observacaoMatriz || pedido.observacaoMatriz || "Motivo não informado pelo CD.";
+                            return `
+                                <div class="item-pedido-resumo">
+                                    <strong>${escaparHTML(item.produtoNome)}</strong>
+                                    <span>Estoque informado: ${formatarNumero(item.estoqueInformado)} · Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span>
+                                    ${situacaoItem === "recusado" ? `<span class="motivo-recusa-pedido">Motivo da recusa: ${escaparHTML(motivoRecusa)}</span>` : ""}
+                                </div>
+                            `;
+                        }).join("")}
                     </div>
                     ${compra ? `<p><strong>Chegada prevista no CD:</strong> ${escaparHTML(compra)}</p>` : ""}
                     ${entrega ? `<p><strong>Entrega prevista:</strong> ${escaparHTML(entrega)}</p>` : ""}
@@ -2419,6 +2452,8 @@ elementos.buscaProdutos.addEventListener("input", renderizarProdutos);
 elementos.filtroCategoria.addEventListener("change", renderizarProdutos);
 elementos.buscaHistorico.addEventListener("input", renderizarHistorico);
 elementos.filtroHistorico.addEventListener("change", renderizarHistorico);
+elementos.filtroStatusPedidos.addEventListener("change", renderizarPedidos);
+elementos.filtroStatusMeusPedidos.addEventListener("change", renderizarPortalFilial);
 elementos.movimentoProduto.addEventListener("change", () => {
     produtoSelecionadoMovimentacao = elementos.movimentoProduto.value;
     atualizarInformacaoProdutoMovimento();
@@ -2802,7 +2837,12 @@ async function iniciarAplicacaoAutenticada() {
     if (error || !perfil) { console.error(error); notificar("Perfil não encontrado. Execute supabase/reparar-perfis.sql no SQL Editor e defina o administrador.", "erro"); return; }
     perfilAtual = perfil;
     aplicarPermissoesDoUsuario();
-    navegar(usuarioEhCD() ? "dashboard" : "portal-filial");
+    const navegacaoSalva = recuperarNavegacaoAtual();
+    if (usuarioEhCD() && navegacaoSalva?.portal && [CENTRO_DISTRIBUICAO_ID, ...estado.filiais.map((filial) => filial.id)].includes(navegacaoSalva.portal)) {
+        portalAtual = navegacaoSalva.portal;
+        elementos.seletorPortal.value = portalAtual;
+    }
+    navegar(navegacaoSalva?.pagina || (usuarioEhCD() ? "dashboard" : "portal-filial"), { tipoMovimentacao: navegacaoSalva?.tipoMovimentacao });
     await carregarDadosSupabase();
     await carregarUsuarios();
     clienteSupabase.channel("estoque-em-tempo-real")
