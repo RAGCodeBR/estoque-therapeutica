@@ -51,6 +51,7 @@ input {
 }
 
 .div-card {
+    position: relative;
     height: 500px;
     width: 100%;
     max-width: 1200px;
@@ -126,6 +127,37 @@ input {
     background: transparent;
     cursor: pointer;
     color: var(--cinza);
+}
+
+.botao-voltar-login {
+    position: absolute;
+    top: 34px;
+    left: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid #dbe4d2;
+    border-radius: 10px;
+    background: var(--branco);
+    color: #597043;
+    font-family: var(--fonte-login);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: .2s;
+}
+
+.botao-voltar-login span {
+    font-size: 21px;
+    line-height: 1;
+}
+
+.botao-voltar-login:hover,
+.botao-voltar-login:focus-visible {
+    background: #edf3e8;
+    border-color: var(--fundo-botao);
+    outline: none;
 }
 
 select { width: 100%; padding: 12px; border: 1px solid var(--cinza); border-radius: 10px; font-size: 16px; box-sizing: border-box; background: #fff; }

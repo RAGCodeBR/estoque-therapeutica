@@ -32,7 +32,12 @@ h1 {
     font-size: 40px;
 }
 
+.cabecalho-login {
+    text-align: center;
+}
+
 .card-login {
+    position: relative;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -47,6 +52,77 @@ h1 {
     font-family: var(--fonte-login);
     background-color: var(--fundo-card);
     box-shadow: 0 15px 35px rgba(0,0,0,.08);
+}
+
+.cabecalho-formulario {
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+}
+
+.cabecalho-formulario h1 {
+    padding-bottom: 10px;
+}
+
+.cabecalho-formulario span {
+    display: block;
+    color: #555;
+    line-height: 1.5;
+}
+
+.formulario-autenticacao {
+    width: 100%;
+    max-width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.botao-voltar-login {
+    position: absolute;
+    top: 24px;
+    left: 28px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid #dbe4d2;
+    border-radius: 10px;
+    background: var(--branco);
+    color: #597043;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: .2s;
+}
+
+.botao-voltar-login span {
+    font-size: 21px;
+    line-height: 1;
+}
+
+.botao-voltar-login:hover,
+.botao-voltar-login:focus-visible {
+    background: #edf3e8;
+    border-color: var(--fundo-botao);
+    outline: none;
+}
+
+.botao-logar:disabled {
+    cursor: wait;
+    opacity: .7;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .botao-logar {
@@ -138,3 +214,20 @@ input:focus {
 }
 
 .mensagem-autenticacao { min-height: 20px; max-width: 260px; text-align: center; color: #a94332; font-size: 14px; }
+
+@media (max-width: 600px) {
+    .card-login {
+        width: calc(100% - 32px);
+        padding: 30px 24px 40px;
+        border-radius: 32px;
+        box-sizing: border-box;
+    }
+
+    .logo {
+        width: min(260px, 100%);
+    }
+
+    h1 {
+        font-size: 32px;
+    }
+}

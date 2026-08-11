@@ -1046,6 +1046,11 @@ tbody tr:last-child td {
     width: min(100%, 520px);
 }
 
+.modal-estoque-filial-conteudo {
+    width: min(100%, 980px);
+    box-sizing: border-box;
+}
+
 #modal-entrega { z-index: 30; }
 
 .modal-cabecalho {

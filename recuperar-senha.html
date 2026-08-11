@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#e87861">
+    <title>Recuperar senha - Estoque Therapeutica</title>
+    <link rel="stylesheet" href="./assets/css/login.css">
+</head>
+<body>
+    <main class="card-login">
+        <a class="botao-voltar-login" href="./login.html" aria-label="Voltar para a página de login">
+            <span aria-hidden="true">←</span> Voltar ao login
+        </a>
+        <img class="logo" src="./assets/img/therapeutica-logo-01.png" alt="Therapeutica">
+        <div class="cabecalho-formulario">
+            <h1>Recuperar senha</h1>
+            <span>Informe seu e-mail e enviaremos um link para você criar uma nova senha.</span>
+        </div>
+        <form class="formulario-autenticacao" id="formulario-recuperacao">
+            <label class="sr-only" for="email-recuperacao">E-mail</label>
+            <input type="email" id="email-recuperacao" placeholder="E-mail" required autocomplete="email">
+            <button type="submit" class="botao-logar">Enviar link</button>
+        </form>
+        <p class="mensagem-autenticacao" id="mensagem-recuperacao" role="status" aria-live="polite"></p>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'"></script>
+    <script src="./assets/js/env.js"></script>
+    <script src="./assets/js/supabase-client.js"></script>
+    <script src="./assets/js/recuperar-senha.js"></script>
+</body>
+</html>

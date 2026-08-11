@@ -283,7 +283,7 @@
                         <article class="cartao cartao-alerta">
                             <p>Pedidos em aberto</p>
                             <strong id="indicador-filial-pedidos">0</strong>
-                            <span>aguardando CD</span>
+                            <span>Aguardando CD</span>
                         </article>
                     </section>
                 </section>
@@ -624,7 +624,7 @@
     </div>
 
     <div class="modal" id="modal-estoque-filial" aria-hidden="true">
-        <div class="modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-estoque-filial">
+        <div class="modal-conteudo modal-estoque-filial-conteudo" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-estoque-filial">
             <div class="modal-cabecalho">
                 <div><p class="subtitulo-modal">Consulta do CD</p><h2 id="titulo-modal-estoque-filial">Estoque da filial</h2></div>
                 <button class="botao-fechar" type="button" data-fechar-modal="modal-estoque-filial" aria-label="Fechar">×</button>
@@ -634,6 +634,21 @@
                     <thead><tr><th>Produto</th><th>Categoria</th><th>Quantidade</th><th>Unidade</th><th>Atualização</th></tr></thead>
                     <tbody id="tabela-modal-estoque-filial"></tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-confirmar-recebimento" aria-hidden="true">
+        <div class="modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-confirmar-recebimento">
+            <div class="modal-cabecalho">
+                <div><p class="subtitulo-modal">Recebimento da filial</p><h2 id="titulo-modal-confirmar-recebimento">Conferir itens do pedido</h2></div>
+                <button class="botao-fechar" type="button" data-fechar-modal="modal-confirmar-recebimento" aria-label="Fechar">×</button>
+            </div>
+            <p class="texto-apoio">Confira os itens enviados e os cancelados pelo Centro de Distribuição antes de confirmar o recebimento.</p>
+            <div class="itens-pedido-resumo" id="lista-confirmacao-recebimento"></div>
+            <div class="acoes-formulario">
+                <button type="button" class="botao-secundario" data-fechar-modal="modal-confirmar-recebimento">Cancelar</button>
+                <button type="button" class="botao-principal" id="botao-confirmar-itens-recebidos">Confirmar recebimento dos itens enviados</button>
             </div>
         </div>
     </div>

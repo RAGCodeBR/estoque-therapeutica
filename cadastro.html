@@ -9,6 +9,9 @@
 </head>
 <body>
     <div class="div-card">
+        <a class="botao-voltar-login" href="./login.html" aria-label="Voltar para a página de login">
+            <span aria-hidden="true">←</span> Voltar ao login
+        </a>
         <img src="./assets/img/therapeutica-logo-01.png">
 
         <hr>
@@ -17,12 +20,6 @@
             <input type="text" id="usuario" placeholder="Nome de usuário" required>
 
             <input type="email" id="email" placeholder="E-mail" required>
-            <select id="filial" required aria-label="Filial">
-                <option value="" selected disabled>Selecione sua filial</option>
-                <option value="matriz">Matriz</option><option value="blumenau">Blumenau</option>
-                <option value="lucas">Lucas do Rio Verde</option><option value="sinop">Sinop</option>
-            </select>
-
             <div class="campo-senha">
                 <input type="password" id="senha" placeholder="Senha" required>
                 <button type="button" class="botao-olho fa fa-eye" id="verSenha" aria-label="Mostrar senha"></button>
@@ -31,7 +28,12 @@
                 <input type="password" id="confirmarSenha" placeholder="Confirme a senha" required>
                 <button type="button" class="botao-olho fa fa-eye" id="verConfirmSenha" aria-label="Mostrar confirmação de senha"></button>
             </div>
-            
+            <select id="filial" required aria-label="Filial">
+                <option value="" selected disabled>Selecione sua filial</option>
+                <option value="matriz">Matriz</option><option value="blumenau">Blumenau</option>
+                <option value="lucas">Lucas do Rio Verde</option><option value="sinop">Sinop</option>
+            </select>
+
             <button type="submit" class="botao-cadastrar" id="botao-cadastrar">Cadastrar</button>
             <p class="mensagem-autenticacao" id="mensagem-cadastro" role="status" aria-live="polite"></p>
         </form>

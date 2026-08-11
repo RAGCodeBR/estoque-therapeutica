@@ -146,7 +146,10 @@ const elementos = {
     mensagemUsuario: document.querySelector("#mensagem-usuario"),
     modalEstoqueFilial: document.querySelector("#modal-estoque-filial"),
     tituloModalEstoqueFilial: document.querySelector("#titulo-modal-estoque-filial"),
-    tabelaModalEstoqueFilial: document.querySelector("#tabela-modal-estoque-filial")
+    tabelaModalEstoqueFilial: document.querySelector("#tabela-modal-estoque-filial"),
+    modalConfirmarRecebimento: document.querySelector("#modal-confirmar-recebimento"),
+    listaConfirmacaoRecebimento: document.querySelector("#lista-confirmacao-recebimento"),
+    botaoConfirmarItensRecebidos: document.querySelector("#botao-confirmar-itens-recebidos")
 };
 
 let paginaAtual = "dashboard";
@@ -156,6 +159,7 @@ let itensXmlMovimentacao = [];
 let indiceItemXmlSelecionado = null;
 let itensSelecionadosPedido = [];
 let pedidoEmAnaliseId = "";
+let pedidoEmConfirmacaoId = "";
 let portalAtual = CENTRO_DISTRIBUICAO_ID;
 let itensDoPedidoAtual = [];
 let temporizadorToast;
@@ -1880,6 +1884,67 @@ function receberCompraMatriz(pedidoId, dataEntrega) {
     notificar("Compra recebida, estoque do CD alimentado e envio para filial criado.");
 }
 
+function abrirModalConfirmarRecebimento(pedidoId) {
+    const pedido = estado.pedidos.find((item) => item.id === pedidoId);
+    const filial = filialAtual();
+    if (!pedido || pedido.situacao !== "em_transito" || !filial || pedido.filialId !== filial.id) return;
+
+    const itensEnviados = itensDoPedido(pedido).filter((item) => (item.situacao || pedido.situacao) === "em_transito");
+    if (!itensEnviados.length) return;
+
+    pedidoEmConfirmacaoId = pedido.id;
+    elementos.listaConfirmacaoRecebimento.innerHTML = itensDoPedido(pedido).map((item) => {
+        const situacao = item.situacao || pedido.situacao;
+        const enviado = situacao === "em_transito";
+        const descricao = enviado
+            ? "Enviado pelo CD — confirme o recebimento deste item."
+            : `Não será enviado: ${item.observacaoMatriz || "item cancelado pelo CD."}`;
+        return `<article class="item-analise-pedido"><div class="item-analise-informacoes"><strong>${escaparHTML(item.produtoNome)}</strong><span>Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span><span>${escaparHTML(descricao)}</span></div><div class="item-analise-acoes"><span class="selo-tipo ${classeSituacaoPedido(situacao)}">${enviado ? "Enviado" : textoSituacaoPedido(situacao)}</span></div></article>`;
+    }).join("");
+    abrirModal(elementos.modalConfirmarRecebimento);
+}
+
+async function confirmarItensEnviados(pedidoId) {
+    const pedido = estado.pedidos.find((item) => item.id === pedidoId);
+    const filial = filialAtual();
+    if (!pedido || pedido.situacao !== "em_transito" || !filial || pedido.filialId !== filial.id) return;
+
+    if (clienteSupabase) {
+        const { error } = await clienteSupabase.rpc("confirmar_recebimento_pedido", { p_pedido_id: pedido.id });
+        if (error) {
+            console.error(error);
+            notificar(`Não foi possível confirmar o recebimento: ${error.message}`, "erro");
+            return;
+        }
+
+        fecharModal(elementos.modalConfirmarRecebimento);
+        pedidoEmConfirmacaoId = "";
+        await carregarDadosSupabase();
+        notificar("Recebimento dos itens enviados confirmado.");
+        return;
+    }
+
+    const agora = new Date().toISOString();
+    itensDoPedido(pedido).filter((item) => (item.situacao || pedido.situacao) === "em_transito").forEach((item) => {
+        const produto = buscarProduto(item.produtoId);
+        if (!produto) return;
+        const chave = chaveEstoqueFilial(pedido.filialId, produto.id);
+        const registroAtual = estado.estoqueFiliais[chave];
+        const saldoAtual = numeroInteiroNaoNegativo(registroAtual?.quantidade ?? registroAtual ?? item.estoqueInformado);
+        estado.estoqueFiliais[chave] = { quantidade: saldoAtual + item.quantidadeSolicitada, atualizadoEm: agora };
+        item.situacao = "recebido";
+    });
+
+    atualizarSituacaoDoPedido(pedido);
+    pedido.recebidoEm = agora;
+    pedido.observacaoMatriz = pedido.observacaoMatriz || "Pedido recebido pela filial.";
+    salvarEstado();
+    fecharModal(elementos.modalConfirmarRecebimento);
+    pedidoEmConfirmacaoId = "";
+    renderizarTudo();
+    notificar("Recebimento dos itens enviados confirmado.");
+}
+
 function confirmarRecebimentoPedido(pedidoId) {
     const pedido = estado.pedidos.find((item) => item.id === pedidoId);
     const filial = filialAtual();
@@ -1985,14 +2050,69 @@ async function recusarPedido(pedidoId) {
     notificar("Pedido recusado.");
 }
 
-function recusarItemPedido(pedidoId, produtoId) {
+async function recusarItemPedido(pedidoId, produtoId) {
     const pedido = estado.pedidos.find((item) => item.id === pedidoId);
-    const item = pedido && itensDoPedido(pedido).find((registro) => registro.produtoId === produtoId);
-    if (!pedido || !item || !["pendente", "aguardando_compra"].includes(item.situacao || pedido.situacao)) return;
+    if (!pedido) {
+        notificar("Não foi possível localizar o pedido. Atualize a página e tente novamente.", "erro");
+        return;
+    }
+
+    const item = itensDoPedido(pedido).find((registro) => String(registro.produtoId) === String(produtoId));
+    if (!item) {
+        notificar("Não foi possível localizar o item do pedido. Atualize a página e tente novamente.", "erro");
+        return;
+    }
+
+    const situacao = item.situacao || pedido.situacao || "pendente";
+    if (!["pendente", "aguardando_compra"].includes(situacao)) {
+        notificar("Este item já foi analisado e não pode ser recusado.", "erro");
+        return;
+    }
+
     const motivo = window.prompt(`Informe o motivo da recusa de ${item.produtoNome}:`);
     if (motivo === null) return;
+
+    const observacaoMatriz = motivo.trim() || "Item recusado pelo CD.";
+    const atualizadoEmAnterior = pedido.atualizadoEm;
+
+    if (clienteSupabase && usuarioEhCD()) {
+        const { data: itemAtualizado, error: erroItem } = await clienteSupabase.from("pedido_itens")
+            .update({ situacao: "recusado", observacao_matriz: observacaoMatriz })
+            .eq("pedido_id", pedido.id)
+            .eq("produto_id", item.produtoId)
+            .select("pedido_id");
+
+        if (erroItem || !itemAtualizado?.length) {
+            if (erroItem) console.error(erroItem);
+            notificar(erroItem ? `Não foi possível recusar o item: ${erroItem.message}` : "Não foi possível localizar o item para recusa. Atualize a página e tente novamente.", "erro");
+            return;
+        }
+
+        item.situacao = "recusado";
+        item.observacaoMatriz = observacaoMatriz;
+        atualizarSituacaoDoPedido(pedido);
+        pedido.analisadoEm = new Date().toISOString();
+
+        const { data, error: erroPedido } = await clienteSupabase.from("pedidos")
+            .update({ situacao: pedido.situacao, analisado_em: pedido.analisadoEm, atualizado_em: pedido.atualizadoEm })
+            .eq("id", pedido.id)
+            .eq("atualizado_em", atualizadoEmAnterior)
+            .select("id");
+
+        if (erroPedido || !data?.length) {
+            if (erroPedido) console.error(erroPedido);
+            await carregarDadosSupabase();
+            notificar(erroPedido ? `O item foi recusado, mas não foi possível atualizar o pedido: ${erroPedido.message}` : "O item foi recusado, mas o pedido foi alterado em outra sessão. Os dados foram atualizados.", "erro");
+            return;
+        }
+
+        await carregarDadosSupabase();
+        notificar("Item recusado.");
+        return;
+    }
+
     item.situacao = "recusado";
-    item.observacaoMatriz = motivo.trim() || "Item recusado pelo CD.";
+    item.observacaoMatriz = observacaoMatriz;
     atualizarSituacaoDoPedido(pedido);
     salvarEstado();
     renderizarTudo();
@@ -2160,7 +2280,7 @@ function lidarComAcao(acao, elemento) {
             abrirModalReceberCompra(elemento.dataset.pedidoId);
             break;
         case "confirmar-recebimento":
-            confirmarRecebimentoPedido(elemento.dataset.pedidoId);
+            abrirModalConfirmarRecebimento(elemento.dataset.pedidoId);
             break;
         case "recusar-pedido":
             recusarPedido(elemento.dataset.pedidoId);
@@ -2191,7 +2311,19 @@ document.addEventListener("click", (evento) => {
     }
 });
 
-[elementos.modalProduto, elementos.modalPedido, elementos.modalEntrega, elementos.modalAnalisarPedido, elementos.modalUsuario, elementos.modalEstoqueFilial].forEach((modal) => {
+elementos.listaAnalisarPedido?.addEventListener("click", (evento) => {
+    const botaoRecusar = evento.target.closest('[data-acao="recusar-item-pedido"]');
+    if (!botaoRecusar) return;
+
+    evento.stopPropagation();
+    recusarItemPedido(botaoRecusar.dataset.pedidoId, botaoRecusar.dataset.produtoId);
+});
+
+elementos.botaoConfirmarItensRecebidos?.addEventListener("click", () => {
+    if (pedidoEmConfirmacaoId) confirmarItensEnviados(pedidoEmConfirmacaoId);
+});
+
+[elementos.modalProduto, elementos.modalPedido, elementos.modalEntrega, elementos.modalAnalisarPedido, elementos.modalUsuario, elementos.modalEstoqueFilial, elementos.modalConfirmarRecebimento].forEach((modal) => {
     modal.addEventListener("click", (evento) => {
         if (evento.target === modal) fecharModal(modal);
     });
@@ -2205,6 +2337,7 @@ document.addEventListener("keydown", (evento) => {
         fecharModal(elementos.modalAnalisarPedido);
         fecharModal(elementos.modalUsuario);
         fecharModal(elementos.modalEstoqueFilial);
+        fecharModal(elementos.modalConfirmarRecebimento);
     }
 });
 
