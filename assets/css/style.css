@@ -339,6 +339,23 @@ main {
     margin-top: 26px;
 }
 
+.acoes-apresentacao .botao-principal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    margin-top: 0;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+.acoes-apresentacao .icone {
+    width: 18px;
+    height: 18px;
+}
+
 .botao-principal,
 .botao-secundario,
 .botao-perigo,
