@@ -1,0 +1,42 @@
+name: Criar migration-base do Supabase
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  capturar-banco-atual:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Vincular projeto Supabase
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      - name: Criar migration-base a partir do banco remoto
+        run: supabase db pull remote_schema
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      - name: Salvar migration-base no repositório
+        run: |
+          if git diff --quiet -- supabase/migrations; then
+            echo "Nenhuma mudança de esquema pendente."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add supabase/migrations
+          git commit -m "Adiciona migration-base do banco remoto"
+          git push
