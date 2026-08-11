@@ -1331,7 +1331,10 @@ function renderizarPedidos() {
                     <span>Filial: ${formatarNumero(item.estoqueInformado)} · Pedido: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span>
                 </div>
             `).join("");
-            const acoes = `<button type="button" class="botao-acao acao-aprovar" data-acao="analisar-pedido" data-pedido-id="${pedido.id}">Analisar itens</button>`;
+            const haItensPendentes = itens.some((item) => (item.situacao || pedido.situacao) === "pendente");
+            const acoes = haItensPendentes
+                ? `<button type="button" class="botao-acao acao-aprovar" data-acao="analisar-pedido" data-pedido-id="${pedido.id}">Analisar itens</button>`
+                : `<button type="button" class="botao-acao" data-acao="consultar-pedido" data-pedido-id="${pedido.id}">Consultar pedido</button>`;
 
             return `
                 <tr>
@@ -1362,7 +1365,7 @@ function abrirModalAnalisarPedido(pedidoId) {
             : situacao === "aguardando_compra"
                 ? `<div class="acoes-tabela"><button type="button" class="botao-acao acao-aprovar" data-acao="receber-compra-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Receber compra</button><button type="button" class="botao-acao acao-perigo" data-acao="recusar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Recusar</button></div>`
                 : "";
-        return `<div class="item-pedido-resumo"><strong>${escaparHTML(item.produtoNome)}</strong><span>Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)} · <span class="selo-tipo ${classeSituacaoPedido(situacao)}">${textoSituacaoPedido(situacao)}</span></span>${item.observacaoMatriz ? `<span>${escaparHTML(item.observacaoMatriz)}</span>` : ""}${acoes}</div>`;
+        return `<article class="item-analise-pedido"><div class="item-analise-informacoes"><strong>${escaparHTML(item.produtoNome)}</strong><span>Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span>${item.observacaoMatriz ? `<span>${escaparHTML(item.observacaoMatriz)}</span>` : ""}</div><div class="item-analise-acoes"><span class="selo-tipo ${classeSituacaoPedido(situacao)}">${textoSituacaoPedido(situacao)}</span>${acoes}</div></article>`;
     }).join("");
     abrirModal(elementos.modalAnalisarPedido);
 }
@@ -2127,6 +2130,9 @@ function lidarComAcao(acao, elemento) {
             renderizarCarrinhoPedido();
             break;
         case "analisar-pedido":
+            abrirModalAnalisarPedido(elemento.dataset.pedidoId);
+            break;
+        case "consultar-pedido":
             abrirModalAnalisarPedido(elemento.dataset.pedidoId);
             break;
         case "aprovar-item-pedido":
