@@ -15,7 +15,9 @@ formularioRecuperacao?.addEventListener('submit', async (evento) => {
     const botao = formularioRecuperacao.querySelector('button[type="submit"]');
     botao.disabled = true;
     informarRecuperacao('Enviando link...', false);
-    const destino = new URL('./redefinir-senha.html', window.location.href).href;
+    // O e-mail pode ser solicitado durante o desenvolvimento local, mas o link
+    // precisa abrir uma página acessível também fora deste computador.
+    const destino = 'https://ragcodebr.github.io/estoque-therapeutica/redefinir-senha.html';
     const { error } = await cliente.auth.resetPasswordForEmail(emailRecuperacao.value.trim(), { redirectTo: destino });
     botao.disabled = false;
     if (error) {
