@@ -136,6 +136,7 @@ textarea:focus-visible {
 
 .item-menu {
     display: flex;
+    position: relative;
     align-items: center;
     gap: 14px;
     width: 100%;
@@ -163,6 +164,24 @@ textarea:focus-visible {
     color: var(--salmão);
     background: var(--salmão-claro);
 }
+
+.notificacao-pedidos {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 21px;
+    height: 21px;
+    margin-left: auto;
+    padding: 0 6px;
+    border-radius: 999px;
+    color: var(--branco);
+    background: var(--vermelho);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.notificacao-pedidos[hidden] { display: none; }
 
 .rodape-menu {
     display: flex;
@@ -1095,6 +1114,7 @@ small {
     .item-menu > span:not(.icone),
     .rodape-menu span:last-child { display: none; }
     .item-menu { justify-content: center; padding: 14px 10px; font-size: 18px; }
+    .item-menu > span.notificacao-pedidos { display: inline-flex; position: absolute; margin: -24px 0 0 28px; }
     .rodape-menu { justify-content: center; }
     .indicadores { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grade-filiais,

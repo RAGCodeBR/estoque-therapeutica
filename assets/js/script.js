@@ -56,6 +56,7 @@ const elementos = {
     tabelaProdutos: document.querySelector("#tabela-produtos"),
     tabelaEstoqueBaixo: document.querySelector("#tabela-estoque-baixo"),
     tabelaPedidos: document.querySelector("#tabela-pedidos"),
+    notificacaoPedidos: document.querySelector("#notificacao-pedidos"),
     listaFiliais: document.querySelector("#lista-filiais"),
     buscaHistorico: document.querySelector("#busca-historico"),
     filtroHistorico: document.querySelector("#filtro-historico"),
@@ -1337,6 +1338,13 @@ function renderizarPedidos() {
         : "<tr><td colspan=\"5\" class=\"tabela-vazia\">Nenhum pedido criado ainda.</td></tr>";
 }
 
+function renderizarNotificacaoPedidos() {
+    const pendentes = estado.pedidos.filter((pedido) => pedido.situacao === "pendente").length;
+    elementos.notificacaoPedidos.hidden = pendentes === 0;
+    elementos.notificacaoPedidos.textContent = pendentes > 99 ? "99+" : String(pendentes);
+    elementos.notificacaoPedidos.setAttribute("aria-label", `${pendentes} ${pendentes === 1 ? "pedido pendente" : "pedidos pendentes"}`);
+}
+
 function renderizarFiliais() {
     elementos.listaFiliais.innerHTML = estado.filiais.map((filial) => {
         const pedidos = estado.pedidos.filter((pedido) => pedido.filialId === filial.id);
@@ -1486,6 +1494,7 @@ function renderizarTudo() {
     renderizarFormularioMovimentacao();
     renderizarEstoqueBaixo();
     renderizarPedidos();
+    renderizarNotificacaoPedidos();
     renderizarFiliais();
     renderizarHistorico();
     renderizarUsuarios();
