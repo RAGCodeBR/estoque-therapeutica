@@ -15,6 +15,12 @@ if (olho && senha) {
 const formulario = document.querySelector('#formulario-login');
 const email = document.querySelector('#email-login');
 const mensagem = document.querySelector('#mensagem-login');
+const manterConectado = document.querySelector('#manter-conectado');
+
+if (manterConectado) {
+    manterConectado.checked = manterSessaoEntreNavegacoes();
+    manterConectado.addEventListener('change', () => configurarPersistenciaSessao(manterConectado.checked));
+}
 
 function informar(texto, erro = true) {
     mensagem.textContent = texto;
@@ -23,6 +29,7 @@ function informar(texto, erro = true) {
 
 formulario?.addEventListener('submit', async (evento) => {
     evento.preventDefault();
+    configurarPersistenciaSessao(manterConectado?.checked ?? true);
     const cliente = obterClienteSupabase();
     if (!cliente) return informar('Não foi possível carregar o serviço de login.');
     informar('Entrando...', false);

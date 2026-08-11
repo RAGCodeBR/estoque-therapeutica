@@ -146,9 +146,10 @@ const elementos = {
     modalEstoqueFilial: document.querySelector("#modal-estoque-filial"),
     tituloModalEstoqueFilial: document.querySelector("#titulo-modal-estoque-filial"),
     tabelaModalEstoqueFilial: document.querySelector("#tabela-modal-estoque-filial"),
-    modalConfirmarRecebimento: document.querySelector("#modal-confirmar-recebimento"),
-    listaConfirmacaoRecebimento: document.querySelector("#lista-confirmacao-recebimento"),
-    botaoConfirmarItensRecebidos: document.querySelector("#botao-confirmar-itens-recebidos")
+    modalDetalhesPedido: document.querySelector("#modal-detalhes-pedido"),
+    tituloModalDetalhesPedido: document.querySelector("#titulo-modal-detalhes-pedido"),
+    resumoDetalhesPedido: document.querySelector("#resumo-detalhes-pedido"),
+    listaDetalhesPedido: document.querySelector("#lista-detalhes-pedido")
 };
 
 let paginaAtual = "dashboard";
@@ -158,7 +159,6 @@ let itensXmlMovimentacao = [];
 let indiceItemXmlSelecionado = null;
 let itensSelecionadosPedido = [];
 let pedidoEmAnaliseId = "";
-let pedidoEmConfirmacaoId = "";
 let portalAtual = CENTRO_DISTRIBUICAO_ID;
 let itensDoPedidoAtual = [];
 let temporizadorToast;
@@ -174,13 +174,11 @@ function aplicarPermissoesDoUsuario() {
     if (usuarioEhCD()) {
         portalAtual = CENTRO_DISTRIBUICAO_ID;
         elementos.seletorPortal.disabled = false;
-        elementos.botaoIrAlertas.hidden = false;
         return;
     }
     portalAtual = perfilAtual.filial_id;
     elementos.seletorPortal.value = portalAtual;
     elementos.seletorPortal.disabled = true;
-    elementos.botaoIrAlertas.hidden = true;
 }
 
 function gerarId(prefixo) {
@@ -640,7 +638,7 @@ function pedidoParaBanco(pedido) {
 }
 
 function itensParaBanco(pedidos) {
-    return pedidos.flatMap((pedido) => itensDoPedido(pedido).map((item) => ({ pedido_id: pedido.id, produto_id: item.produtoId, estoque_informado: item.estoqueInformado, quantidade_solicitada: item.quantidadeSolicitada, observacao: item.observacao || "", situacao: item.situacao || pedido.situacao || "pendente", observacao_matriz: item.observacaoMatriz || "" })));
+    return pedidos.flatMap((pedido) => itensDoPedido(pedido).map((item) => ({ pedido_id: pedido.id, produto_id: item.produtoId, estoque_informado: item.estoqueInformado, quantidade_solicitada: item.quantidadeSolicitada, observacao: item.observacao || "", situacao: item.situacao || pedido.situacao || "pendente", observacao_matriz: item.observacaoMatriz || "", recebido_em: item.recebidoEm || null })));
 }
 
 async function sincronizarEstadoNoSupabase() {
@@ -752,7 +750,7 @@ async function carregarDadosSupabase() {
             id: pedido.id, filialId: pedido.filial_id,
             itens: pedido.itens.map((item) => {
                 const produto = produtosPorId.get(item.produto_id);
-                return { produtoId: item.produto_id, produtoNome: produto?.nome || "Produto nao identificado", unidade: produto?.unidade || "Unidade", estoqueInformado: item.estoque_informado, quantidadeSolicitada: item.quantidade_solicitada, observacao: item.observacao, situacao: item.situacao || pedido.situacao, observacaoMatriz: item.observacao_matriz || "" };
+                return { produtoId: item.produto_id, produtoNome: produto?.nome || "Produto nao identificado", unidade: produto?.unidade || "Unidade", estoqueInformado: item.estoque_informado, quantidadeSolicitada: item.quantidade_solicitada, observacao: item.observacao, situacao: item.situacao || pedido.situacao, observacaoMatriz: item.observacao_matriz || "", recebidoEm: item.recebido_em || null };
             }),
             observacao: pedido.observacao, observacaoMatriz: pedido.observacao_matriz, situacao: pedido.situacao,
             compraPrevista: pedido.compra_prevista || "", compraRecebidaEm: pedido.compra_recebida_em,
@@ -1494,7 +1492,9 @@ function renderizarPortalFilial() {
                     ${entrega ? `<p><strong>Entrega prevista:</strong> ${escaparHTML(entrega)}</p>` : ""}
                     ${pedido.recebidoEm ? `<p><strong>Recebido em:</strong> ${formatarData(pedido.recebidoEm)}</p>` : ""}
                     ${pedido.observacaoMatriz ? `<p><strong>Resposta do CD:</strong> ${escaparHTML(pedido.observacaoMatriz)}</p>` : ""}
-                    ${pedido.situacao === "em_transito" ? `<button type="button" class="botao-principal" data-acao="confirmar-recebimento" data-pedido-id="${pedido.id}">Confirmar recebimento</button>` : ""}
+                    <div class="acoes-pedido-filial">
+                        <button type="button" class="botao-acao" data-acao="ver-detalhes-pedido" data-pedido-id="${pedido.id}">Ver detalhes</button>
+                    </div>
                 </article>
             `;
         }).join("")
@@ -1903,6 +1903,82 @@ function abrirModalConfirmarRecebimento(pedidoId) {
     abrirModal(elementos.modalConfirmarRecebimento);
 }
 
+function abrirModalDetalhesPedido(pedidoId) {
+    const pedido = estado.pedidos.find((item) => item.id === pedidoId);
+    const filial = filialAtual();
+    if (!pedido || !filial || pedido.filialId !== filial.id) return;
+
+    elementos.tituloModalDetalhesPedido.textContent = `Pedido de ${formatarData(pedido.criadoEm)}`;
+    elementos.resumoDetalhesPedido.textContent = pedido.observacao || "Sem observação geral.";
+    elementos.listaDetalhesPedido.innerHTML = itensDoPedido(pedido).map((item) => {
+        const situacao = item.situacao || pedido.situacao || "pendente";
+        const foiEnviado = ["em_transito", "recebido"].includes(situacao);
+        const quantidadeEnviada = foiEnviado ? item.quantidadeSolicitada : 0;
+        const confirmadoEm = item.recebidoEm || (situacao === "recebido" ? pedido.recebidoEm : null);
+        const descricao = foiEnviado
+            ? situacao === "recebido" ? "Recebido pela filial." : "Enviado pelo CD e aguardando confirmação."
+            : {
+                recusado: "Não enviado: item recusado pelo CD.",
+                aguardando_compra: "Não enviado: aguardando compra pelo CD.",
+                pendente: "Não enviado: aguardando análise do CD."
+            }[situacao] || "Não enviado pelo CD.";
+        return `
+            <article class="item-detalhes-pedido">
+                <div>
+                    <strong>${escaparHTML(item.produtoNome)}</strong>
+                    <span>Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)} · Enviado: ${formatarNumero(quantidadeEnviada)} ${escaparHTML(item.unidade)}</span>
+                    <span>${escaparHTML(descricao)}</span>
+                </div>
+                <div class="acoes-item-detalhes">
+                    <span class="selo-tipo ${foiEnviado ? "tipo-aprovado" : classeSituacaoPedido(situacao)}">${foiEnviado ? "Enviado" : "Não enviado"}</span>
+                    ${situacao === "em_transito" ? `<button type="button" class="botao-acao acao-aprovar" data-acao="confirmar-recebimento-item" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Confirmar item</button>` : ""}
+                    ${confirmadoEm ? `<span class="data-recebimento-item">Confirmado em<br>${formatarData(confirmadoEm)}</span>` : ""}
+                </div>
+            </article>
+        `;
+    }).join("");
+    abrirModal(elementos.modalDetalhesPedido);
+}
+
+async function confirmarRecebimentoItem(pedidoId, produtoId) {
+    const pedido = estado.pedidos.find((item) => item.id === pedidoId);
+    const filial = filialAtual();
+    const item = pedido && itensDoPedido(pedido).find((registro) => registro.produtoId === produtoId);
+    if (!pedido || !item || (item.situacao || pedido.situacao) !== "em_transito" || !filial || pedido.filialId !== filial.id) return;
+
+    if (clienteSupabase) {
+        const { error } = await clienteSupabase.rpc("confirmar_recebimento_item_pedido", { p_pedido_id: pedido.id, p_produto_id: item.produtoId });
+        if (error) {
+            console.error(error);
+            notificar(`Não foi possível confirmar o item: ${error.message}`, "erro");
+            return;
+        }
+        await carregarDadosSupabase();
+        abrirModalDetalhesPedido(pedido.id);
+        notificar("Recebimento do item confirmado.");
+        return;
+    }
+
+    const produto = buscarProduto(item.produtoId);
+    if (!produto) return;
+    const agora = new Date().toISOString();
+    const chave = chaveEstoqueFilial(pedido.filialId, produto.id);
+    const registroAtual = estado.estoqueFiliais[chave];
+    const saldoAtual = numeroInteiroNaoNegativo(registroAtual?.quantidade ?? registroAtual ?? item.estoqueInformado);
+    estado.estoqueFiliais[chave] = { quantidade: saldoAtual + item.quantidadeSolicitada, atualizadoEm: agora };
+    item.situacao = "recebido";
+    item.recebidoEm = agora;
+    atualizarSituacaoDoPedido(pedido);
+    if (pedido.situacao === "recebido") {
+        pedido.recebidoEm = agora;
+        pedido.observacaoMatriz = pedido.observacaoMatriz || "Todos os itens enviados foram recebidos pela filial.";
+    }
+    salvarEstado();
+    renderizarTudo();
+    abrirModalDetalhesPedido(pedido.id);
+    notificar("Recebimento do item confirmado.");
+}
+
 async function confirmarItensEnviados(pedidoId) {
     const pedido = estado.pedidos.find((item) => item.id === pedidoId);
     const filial = filialAtual();
@@ -2278,8 +2354,11 @@ function lidarComAcao(acao, elemento) {
         case "receber-compra":
             abrirModalReceberCompra(elemento.dataset.pedidoId);
             break;
-        case "confirmar-recebimento":
-            abrirModalConfirmarRecebimento(elemento.dataset.pedidoId);
+        case "confirmar-recebimento-item":
+            confirmarRecebimentoItem(elemento.dataset.pedidoId, elemento.dataset.produtoId);
+            break;
+        case "ver-detalhes-pedido":
+            abrirModalDetalhesPedido(elemento.dataset.pedidoId);
             break;
         case "recusar-pedido":
             recusarPedido(elemento.dataset.pedidoId);
@@ -2318,11 +2397,7 @@ elementos.listaAnalisarPedido?.addEventListener("click", (evento) => {
     recusarItemPedido(botaoRecusar.dataset.pedidoId, botaoRecusar.dataset.produtoId);
 });
 
-elementos.botaoConfirmarItensRecebidos?.addEventListener("click", () => {
-    if (pedidoEmConfirmacaoId) confirmarItensEnviados(pedidoEmConfirmacaoId);
-});
-
-[elementos.modalProduto, elementos.modalPedido, elementos.modalEntrega, elementos.modalAnalisarPedido, elementos.modalUsuario, elementos.modalEstoqueFilial, elementos.modalConfirmarRecebimento].forEach((modal) => {
+[elementos.modalProduto, elementos.modalPedido, elementos.modalEntrega, elementos.modalAnalisarPedido, elementos.modalUsuario, elementos.modalEstoqueFilial, elementos.modalDetalhesPedido].forEach((modal) => {
     modal.addEventListener("click", (evento) => {
         if (evento.target === modal) fecharModal(modal);
     });
@@ -2336,7 +2411,7 @@ document.addEventListener("keydown", (evento) => {
         fecharModal(elementos.modalAnalisarPedido);
         fecharModal(elementos.modalUsuario);
         fecharModal(elementos.modalEstoqueFilial);
-        fecharModal(elementos.modalConfirmarRecebimento);
+        fecharModal(elementos.modalDetalhesPedido);
     }
 });
 

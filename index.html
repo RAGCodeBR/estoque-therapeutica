@@ -655,6 +655,20 @@
         </div>
     </div>
 
+    <div class="modal" id="modal-detalhes-pedido" aria-hidden="true">
+        <div class="modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-detalhes-pedido">
+            <div class="modal-cabecalho">
+                <div><p class="subtitulo-modal">Acompanhamento da filial</p><h2 id="titulo-modal-detalhes-pedido">Detalhes do pedido</h2></div>
+                <button class="botao-fechar" type="button" data-fechar-modal="modal-detalhes-pedido" aria-label="Fechar">&times;</button>
+            </div>
+            <p class="texto-apoio" id="resumo-detalhes-pedido"></p>
+            <div class="lista-detalhes-pedido" id="lista-detalhes-pedido"></div>
+            <div class="acoes-formulario">
+                <button type="button" class="botao-secundario" data-fechar-modal="modal-detalhes-pedido">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js'"></script>

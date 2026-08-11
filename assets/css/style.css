@@ -974,6 +974,92 @@ tbody tr:last-child td {
     font-size: 12px;
 }
 
+.acoes-pedido-filial {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.acoes-pedido-filial .botao-principal {
+    min-height: 32px;
+    margin-top: 0;
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.lista-detalhes-pedido {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.item-detalhes-pedido {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px;
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+    background: #fffdfa;
+}
+
+.item-detalhes-pedido > div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.acoes-item-detalhes {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.acoes-item-detalhes .botao-acao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 7px 12px;
+    color: var(--verde);
+    background: var(--verde-claro);
+    border-color: #cdebd9;
+    border-radius: 999px;
+    font-size: 12px;
+    transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.acoes-item-detalhes .botao-acao::before {
+    content: "✓";
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.acoes-item-detalhes .botao-acao:hover {
+    color: var(--branco);
+    background: var(--verde);
+    border-color: var(--verde);
+}
+
+.item-detalhes-pedido strong { font-size: 14px; }
+
+.item-detalhes-pedido span:not(.selo-tipo) {
+    color: var(--marrom-claro);
+    font-size: 12px;
+}
+
+.item-detalhes-pedido .data-recebimento-item {
+    color: var(--verde);
+    text-align: right;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
 .item-analise-pedido {
     display: flex;
     align-items: center;
@@ -1207,6 +1293,9 @@ small {
     .item-analise-pedido { align-items: flex-start; flex-direction: column; }
     .item-analise-acoes { align-items: flex-start; min-width: 0; }
     .item-analise-acoes .acoes-tabela { flex-wrap: wrap; }
+    .item-detalhes-pedido { align-items: flex-start; flex-direction: column; }
+    .acoes-item-detalhes { align-items: flex-start; }
+    .item-detalhes-pedido .data-recebimento-item { text-align: left; }
     .menu-lateral { display: none; }
     .cabecalho { padding: 15px 20px; }
     main { padding: 22px 20px 38px; }

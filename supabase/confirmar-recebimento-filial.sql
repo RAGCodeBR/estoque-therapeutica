@@ -17,7 +17,10 @@ begin
   from public.pedidos
   where id = p_pedido_id;
 
-  if v_filial_id is null or public.meu_papel() <> 'filial' or v_filial_id <> public.minha_filial_id() then
+  if v_filial_id is null or not (
+    public.meu_papel() = 'cd_admin'
+    or (public.meu_papel() = 'filial' and v_filial_id = public.minha_filial_id())
+  ) then
     raise exception 'Você não tem permissão para confirmar este pedido.';
   end if;
 
