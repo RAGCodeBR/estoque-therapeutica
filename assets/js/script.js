@@ -139,7 +139,10 @@ const elementos = {
     usuarioNome: document.querySelector("#usuario-nome"),
     usuarioPapel: document.querySelector("#usuario-papel"),
     usuarioFilial: document.querySelector("#usuario-filial"),
-    mensagemUsuario: document.querySelector("#mensagem-usuario")
+    mensagemUsuario: document.querySelector("#mensagem-usuario"),
+    modalEstoqueFilial: document.querySelector("#modal-estoque-filial"),
+    tituloModalEstoqueFilial: document.querySelector("#titulo-modal-estoque-filial"),
+    tabelaModalEstoqueFilial: document.querySelector("#tabela-modal-estoque-filial")
 };
 
 let paginaAtual = "dashboard";
@@ -1349,7 +1352,10 @@ function renderizarFiliais() {
                     <div class="metrica-filial"><strong>${formatarNumero(abertos)}</strong><span>pedidos abertos</span></div>
                     <div class="metrica-filial"><strong>${formatarNumero(produtosControlados)}</strong><span>itens informados</span></div>
                 </div>
-                <button type="button" class="botao-secundario" data-acao="abrir-portal-filial" data-filial-id="${filial.id}">Abrir portal</button>
+                <div class="acoes-tabela">
+                    <button type="button" class="botao-secundario" data-acao="abrir-portal-filial" data-filial-id="${filial.id}">Abrir portal</button>
+                    <button type="button" class="botao-secundario" data-acao="consultar-estoque-filial" data-filial-id="${filial.id}">Consultar estoque</button>
+                </div>
             </article>
         `;
     }).join("");
@@ -1506,6 +1512,31 @@ function abrirModalUsuario(id) {
     elementos.usuarioFilial.value = usuario.filial_id || "";
     elementos.usuarioFilial.disabled = usuario.papel === "cd_admin";
     abrirModal(elementos.modalUsuario);
+}
+
+function abrirModalEstoqueFilial(filialId) {
+    if (!usuarioEhCD()) return;
+    const filial = buscarFilial(filialId);
+    if (!filial) return;
+
+    const itensComProduto = Object.entries(estado.estoqueFiliais)
+        .filter(([chave]) => chave.startsWith(`${filial.id}:`))
+        .map(([chave, registro]) => ({ produto: buscarProduto(chave.slice(`${filial.id}:`.length)), registro }))
+        .filter((item) => item.produto);
+
+    elementos.tituloModalEstoqueFilial.textContent = `Estoque da filial ${filial.nome}`;
+    elementos.tabelaModalEstoqueFilial.innerHTML = itensComProduto.length
+        ? itensComProduto.sort((a, b) => a.produto.nome.localeCompare(b.produto.nome, "pt-BR")).map(({ produto, registro }) => `
+            <tr>
+                <td><strong>${escaparHTML(produto.nome)}</strong></td>
+                <td>${escaparHTML(produto.categoria)}</td>
+                <td><strong>${formatarNumero(registro?.quantidade ?? registro)}</strong></td>
+                <td>${escaparHTML(produto.unidade)}</td>
+                <td>${registro?.atualizadoEm ? formatarData(registro.atualizadoEm) : "Não informado"}</td>
+            </tr>
+        `).join("")
+        : "<tr><td colspan=\"5\" class=\"tabela-vazia\">Nenhum estoque foi informado para esta filial.</td></tr>";
+    abrirModal(elementos.modalEstoqueFilial);
 }
 
 function abrirModalProduto(produtoId = "") {
@@ -2019,6 +2050,9 @@ function lidarComAcao(acao, elemento) {
             itensDoPedidoAtual = [];
             navegar("portal-filial");
             break;
+        case "consultar-estoque-filial":
+            abrirModalEstoqueFilial(elemento.dataset.filialId);
+            break;
         case "abrir-novo-pedido-filial":
             navegar("novo-pedido-filial");
             break;
@@ -2067,7 +2101,7 @@ document.addEventListener("click", (evento) => {
     }
 });
 
-[elementos.modalProduto, elementos.modalPedido, elementos.modalEntrega, elementos.modalUsuario].forEach((modal) => {
+[elementos.modalProduto, elementos.modalPedido, elementos.modalEntrega, elementos.modalUsuario, elementos.modalEstoqueFilial].forEach((modal) => {
     modal.addEventListener("click", (evento) => {
         if (evento.target === modal) fecharModal(modal);
     });
@@ -2079,6 +2113,7 @@ document.addEventListener("keydown", (evento) => {
         fecharModal(elementos.modalPedido);
         fecharModal(elementos.modalEntrega);
         fecharModal(elementos.modalUsuario);
+        fecharModal(elementos.modalEstoqueFilial);
     }
 });
 
