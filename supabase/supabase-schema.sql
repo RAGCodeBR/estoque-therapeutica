@@ -55,6 +55,8 @@ create table if not exists public.pedido_itens (
   estoque_informado integer not null check (estoque_informado >= 0),
   quantidade_solicitada integer not null check (quantidade_solicitada > 0),
   observacao text not null default '',
+  situacao text not null default 'pendente' check (situacao in ('pendente', 'aguardando_compra', 'em_transito', 'recebido', 'recusado')),
+  observacao_matriz text not null default '',
   primary key (pedido_id, produto_id)
 );
 

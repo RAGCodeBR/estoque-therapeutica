@@ -1014,6 +1014,8 @@ tbody tr:last-child td {
     width: min(100%, 520px);
 }
 
+#modal-entrega { z-index: 30; }
+
 .modal-cabecalho {
     display: flex;
     align-items: flex-start;
