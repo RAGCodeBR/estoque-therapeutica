@@ -1399,7 +1399,7 @@ function abrirModalAnalisarPedido(pedidoId) {
     elementos.listaAnalisarPedido.innerHTML = itensDoPedido(pedido).map((item) => {
         const situacao = item.situacao || pedido.situacao || "pendente";
         const acoes = situacao === "pendente"
-            ? `<div class="acoes-tabela"><button type="button" class="botao-acao acao-aprovar" data-acao="aprovar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Aprovar</button><button type="button" class="botao-acao" data-acao="comprar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Comprar</button><button type="button" class="botao-acao acao-perigo" data-acao="recusar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Recusar</button></div>`
+            ? `<div class="acoes-tabela"><button type="button" class="botao-acao acao-aprovar" data-acao="aprovar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Aprovar</button><button type="button" class="botao-acao acao-perigo" data-acao="recusar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Recusar</button></div>`
             : situacao === "aguardando_compra"
                 ? `<div class="acoes-tabela"><button type="button" class="botao-acao acao-aprovar" data-acao="receber-compra-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Receber compra</button><button type="button" class="botao-acao acao-perigo" data-acao="recusar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Recusar</button></div>`
                 : "";
