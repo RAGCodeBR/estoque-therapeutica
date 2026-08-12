@@ -2714,7 +2714,7 @@ elementos.formularioItemPedido.addEventListener("submit", (evento) => {
     evento.preventDefault();
     const filial = filialAtual();
     const produto = buscarProduto(elementos.itemPedidoProduto.value);
-    const estoqueInformado = filial && produto ? quantidadeEstoqueFilial(filial.id, produto.id) : null;
+    const estoqueInformado = Number(elementos.itemPedidoEstoque.value);
     const quantidadeSolicitada = Number(elementos.itemPedidoQuantidade.value);
     const observacao = elementos.itemPedidoObservacao.value.trim();
 
@@ -2771,10 +2771,7 @@ elementos.botaoEnviarPedidoLista.addEventListener("click", async () => {
         return;
     }
 
-    const itens = itensDoPedidoAtual.map((item) => ({
-        ...item,
-        estoqueInformado: quantidadeEstoqueFilial(filial.id, item.produtoId)
-    }));
+    const itens = itensDoPedidoAtual.map((item) => ({ ...item }));
     const agora = new Date().toISOString();
 
     const pedido = {
