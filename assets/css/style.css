@@ -1260,6 +1260,14 @@ tbody tr:last-child td {
     border-radius: 14px;
 }
 
+.formulario-modal label[hidden] {
+    display: none;
+}
+
+.data-entrega-grid[hidden] {
+    display: none;
+}
+
 .data-entrega-grid label {
     gap: 8px;
 }

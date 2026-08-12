@@ -112,6 +112,7 @@ const elementos = {
     campoEntregaQuantidade: document.querySelector("#campo-entrega-quantidade"),
     entregaQuantidade: document.querySelector("#entrega-quantidade"),
     ajudaEntregaQuantidade: document.querySelector("#ajuda-entrega-quantidade"),
+    campoEntregaData: document.querySelector("#campo-entrega-data"),
     entregaDia: document.querySelector("#entrega-dia"),
     entregaMes: document.querySelector("#entrega-mes"),
     entregaAno: document.querySelector("#entrega-ano"),
@@ -120,6 +121,7 @@ const elementos = {
     modalAnalisarPedido: document.querySelector("#modal-analisar-pedido"),
     tituloModalAnalisarPedido: document.querySelector("#titulo-modal-analisar-pedido"),
     listaAnalisarPedido: document.querySelector("#lista-analisar-pedido"),
+    botaoEnviarPedidoAnalisado: document.querySelector("#botao-enviar-pedido-analisado"),
     botaoSair: document.querySelector("#botao-sair"),
     botaoExportar: document.querySelector("#botao-exportar"),
     arquivoImportar: document.querySelector("#arquivo-importar"),
@@ -480,7 +482,7 @@ function normalizarPedido(pedido) {
     const situacoesValidas = ["pendente", "aguardando_compra", "em_transito", "recebido", "aprovado", "recusado"];
     const statusRecebido = pedido?.situacao ?? pedido?.status;
     const situacao = situacoesValidas.includes(statusRecebido)
-        ? (statusRecebido === "aprovado" ? "recebido" : statusRecebido)
+        ? statusRecebido
         : "pendente";
 
     const itensRecebidos = Array.isArray(pedido?.itens) ? pedido.itens : [pedido];
@@ -867,18 +869,26 @@ function itensEmAcao(pedido) {
         : itensDoPedido(pedido);
 }
 
+function situacaoDoItemPedido(item, pedido) {
+    const situacao = item.situacao || pedido.situacao || "pendente";
+    return situacao === "pendente" && Number.isInteger(item.quantidadeEnviada) && item.quantidadeEnviada > 0
+        ? "aprovado"
+        : situacao;
+}
+
 function atualizarSituacaoDoPedido(pedido) {
     const situacoes = itensDoPedido(pedido).map((item) => item.situacao || pedido.situacao || "pendente");
     if (situacoes.every((situacao) => situacao === "recusado")) pedido.situacao = "recusado";
     else if (situacoes.every((situacao) => situacao === "recebido" || situacao === "recusado")) pedido.situacao = "recebido";
     else if (situacoes.includes("em_transito")) pedido.situacao = "em_transito";
+    else if (situacoes.includes("aprovado")) pedido.situacao = "aprovado";
     else if (situacoes.includes("aguardando_compra")) pedido.situacao = "aguardando_compra";
     else pedido.situacao = "pendente";
     pedido.atualizadoEm = new Date().toISOString();
 }
 
 function pedidosAbertos() {
-    return estado.pedidos.filter((pedido) => ["pendente", "aguardando_compra", "em_transito"].includes(pedido.situacao));
+    return estado.pedidos.filter((pedido) => ["pendente", "aprovado", "aguardando_compra", "em_transito"].includes(pedido.situacao));
 }
 
 function produtosComEstoqueBaixo() {
@@ -926,7 +936,7 @@ function textoSituacaoPedido(situacao) {
         aguardando_compra: "Aguardando compra",
         em_transito: "A caminho",
         recebido: "Recebido",
-        aprovado: "Recebido",
+        aprovado: "Aprovado",
         recusado: "Recusado"
     }[situacao] || "Pendente";
 }
@@ -1397,7 +1407,7 @@ function abrirModalAnalisarPedido(pedidoId) {
 
     elementos.tituloModalAnalisarPedido.textContent = `Pedido da filial ${filial?.nome || ""}`.trim();
     elementos.listaAnalisarPedido.innerHTML = itensDoPedido(pedido).map((item) => {
-        const situacao = item.situacao || pedido.situacao || "pendente";
+        const situacao = situacaoDoItemPedido(item, pedido);
         const acoes = situacao === "pendente"
             ? `<div class="acoes-tabela"><button type="button" class="botao-acao acao-aprovar" data-acao="aprovar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Aprovar</button><button type="button" class="botao-acao acao-perigo" data-acao="recusar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Recusar</button></div>`
             : situacao === "aguardando_compra"
@@ -1405,6 +1415,9 @@ function abrirModalAnalisarPedido(pedidoId) {
                 : "";
         return `<article class="item-analise-pedido"><div class="item-analise-informacoes"><strong>${escaparHTML(item.produtoNome)}</strong><span>Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span><span>Estoque informado pela filial: ${formatarNumero(item.estoqueInformado)} ${escaparHTML(item.unidade)}</span>${item.observacaoMatriz ? `<span>${escaparHTML(item.observacaoMatriz)}</span>` : ""}</div><div class="item-analise-acoes"><span class="selo-tipo ${classeSituacaoPedido(situacao)}">${textoSituacaoPedido(situacao)}</span>${acoes}</div></article>`;
     }).join("");
+    const todosAnalisados = itensDoPedido(pedido).every((item) => ["aprovado", "recusado"].includes(situacaoDoItemPedido(item, pedido)));
+    elementos.botaoEnviarPedidoAnalisado.disabled = !todosAnalisados;
+    elementos.botaoEnviarPedidoAnalisado.dataset.pedidoId = pedido.id;
     abrirModal(elementos.modalAnalisarPedido);
 }
 
@@ -1721,6 +1734,11 @@ function configurarModalDataPedido(pedido, modo) {
             resumo: `Pedido para ${filial?.nome || "a filial"} com ${itens.length} item(ns). Escolha a previsão de entrega.`,
             botao: "Aprovar envio"
         },
+        enviar_pedido: {
+            titulo: "Data de envio",
+            resumo: `Escolha a data em que o pedido sera enviado para ${filial?.nome || "a filial"}.`,
+            botao: "Enviar pedido"
+        },
         compra: {
             titulo: "Previsão de chegada no CD",
             resumo: `O pedido de ${filial?.nome || "a filial"} ficará aguardando compra. Informe quando a reposição deve chegar no CD.`,
@@ -1734,6 +1752,11 @@ function configurarModalDataPedido(pedido, modo) {
     }[modo];
 
     elementos.formularioEntrega.reset();
+    elementos.campoEntregaData.hidden = false;
+    [elementos.entregaDia, elementos.entregaMes, elementos.entregaAno].forEach((campo) => {
+        campo.disabled = false;
+        campo.required = true;
+    });
     elementos.entregaPedidoId.value = pedido.id;
     elementos.entregaModo.value = modo;
     elementos.tituloModalEntrega.textContent = textos.titulo;
@@ -1744,6 +1767,7 @@ function configurarModalDataPedido(pedido, modo) {
     const itemUnico = modo === "entrega" && itens.length === 1;
     elementos.campoEntregaQuantidade.hidden = !itemUnico;
     elementos.entregaQuantidade.required = itemUnico;
+    elementos.entregaQuantidade.disabled = !itemUnico;
     if (itemUnico) {
         const item = itens[0];
         const produto = buscarProduto(item.produtoId);
@@ -1774,7 +1798,30 @@ function abrirModalEntrega(pedidoId) {
         return;
     }
 
-    configurarModalDataPedido(pedido, "entrega");
+    const item = itens[0];
+    const produto = buscarProduto(item.produtoId);
+    const maximo = Math.min(item.quantidadeSolicitada, produto?.quantidade || 0);
+    elementos.formularioEntrega.reset();
+    elementos.entregaPedidoId.value = pedido.id;
+    elementos.entregaModo.value = "aprovar_item";
+    elementos.tituloModalEntrega.textContent = "Quantidade a enviar";
+    elementos.entregaResumo.textContent = `Informe a quantidade de ${item.produtoNome} que sera enviada.`;
+    elementos.botaoConfirmarData.textContent = "Aprovar item";
+    elementos.mensagemEntrega.textContent = "";
+    elementos.campoEntregaQuantidade.hidden = false;
+    elementos.entregaQuantidade.required = true;
+    elementos.entregaQuantidade.disabled = false;
+    elementos.entregaQuantidade.min = "1";
+    elementos.entregaQuantidade.max = String(maximo);
+    elementos.entregaQuantidade.value = String(maximo);
+    elementos.ajudaEntregaQuantidade.textContent = `Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${item.unidade}. Disponivel no CD: ${formatarNumero(produto?.quantidade || 0)} ${item.unidade}.`;
+    elementos.campoEntregaData.hidden = true;
+    [elementos.entregaDia, elementos.entregaMes, elementos.entregaAno].forEach((campo) => {
+        campo.disabled = true;
+        campo.required = false;
+    });
+    abrirModal(elementos.modalEntrega);
+    setTimeout(() => elementos.entregaQuantidade.focus(), 0);
 }
 
 function abrirModalCompra(pedidoId) {
@@ -1815,6 +1862,90 @@ function arquivarProduto(produtoId) {
     salvarEstado();
     renderizarTudo();
     notificar("Produto arquivado. O histórico foi preservado.");
+}
+
+function aprovarItemPedido(pedidoId, quantidadeSelecionada) {
+    const pedido = estado.pedidos.find((item) => item.id === pedidoId);
+    const item = itensEmAcao(pedido || {}).find((registro) => (registro.situacao || pedido?.situacao) === "pendente");
+    const produto = item && buscarProduto(item.produtoId);
+    const quantidade = Number(quantidadeSelecionada);
+
+    if (!pedido || !item || !produto || !produto.ativo || !Number.isInteger(quantidade) || quantidade < 1 || quantidade > item.quantidadeSolicitada || quantidade > produto.quantidade) {
+        elementos.mensagemEntrega.textContent = "Informe uma quantidade disponivel entre 1 e o total solicitado.";
+        return;
+    }
+
+    item.quantidadeEnviada = quantidade;
+    pedido.analisadoEm = new Date().toISOString();
+    salvarEstado();
+    fecharModal(elementos.modalEntrega);
+    renderizarTudo();
+    abrirModalAnalisarPedido(pedido.id);
+    notificar("Item aprovado. Envie o pedido quando todos os itens forem analisados.");
+}
+
+function abrirModalEnviarPedido(pedidoId) {
+    const pedido = estado.pedidos.find((item) => item.id === pedidoId);
+    if (!pedido || !itensDoPedido(pedido).every((item) => ["aprovado", "recusado"].includes(situacaoDoItemPedido(item, pedido)))) {
+        notificar("Analise todos os itens antes de enviar o pedido.", "erro");
+        return;
+    }
+
+    itensSelecionadosPedido = [];
+    configurarModalDataPedido(pedido, "enviar_pedido");
+}
+
+function enviarPedidoAnalisado(pedidoId, dataEntrega) {
+    const pedido = estado.pedidos.find((item) => item.id === pedidoId);
+    if (!pedido) return;
+
+    const itens = itensDoPedido(pedido);
+    if (!itens.every((item) => ["aprovado", "recusado"].includes(situacaoDoItemPedido(item, pedido)))) {
+        notificar("Analise todos os itens antes de enviar o pedido.", "erro");
+        return;
+    }
+
+    const itensAprovados = itens.filter((item) => situacaoDoItemPedido(item, pedido) === "aprovado");
+    if (!itensAprovados.length) {
+        fecharModal(elementos.modalEntrega);
+        fecharModal(elementos.modalAnalisarPedido);
+        notificar("Todos os itens foram recusados.");
+        return;
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dataEntrega) || Number.isNaN(new Date(`${dataEntrega}T12:00:00`).getTime())) {
+        elementos.mensagemEntrega.textContent = "Escolha uma data de envio valida.";
+        return;
+    }
+
+    const indisponiveis = itensAprovados.filter((item) => {
+        const produto = buscarProduto(item.produtoId);
+        return !produto || produto.quantidade < item.quantidadeEnviada;
+    });
+    if (indisponiveis.length) {
+        notificar("O estoque do CD foi alterado e nao atende mais as quantidades aprovadas.", "erro");
+        return;
+    }
+
+    const agora = new Date().toISOString();
+    itensAprovados.forEach((item) => {
+        const produto = buscarProduto(item.produtoId);
+        const saldoAntes = produto.quantidade;
+        produto.quantidade -= item.quantidadeEnviada;
+        produto.atualizadoEm = agora;
+        item.situacao = "em_transito";
+        registrarMovimentacao({ produto, tipo: "transferencia", quantidade: item.quantidadeEnviada, saldoAntes, saldoDepois: produto.quantidade, observacao: item.observacao || pedido.observacao || `Pedido enviado pelo CD em ${formatarDataSimples(dataEntrega)}.`, filialId: pedido.filialId, pedidoId: pedido.id });
+    });
+    atualizarSituacaoDoPedido(pedido);
+    pedido.recebidoEm = null;
+    pedido.entregaPrevista = dataEntrega;
+    pedido.analisadoEm = agora;
+    pedido.observacaoMatriz = `Pedido enviado pelo CD em ${formatarDataSimples(dataEntrega)}.`;
+    salvarEstado();
+    fecharModal(elementos.modalEntrega);
+    fecharModal(elementos.modalAnalisarPedido);
+    renderizarTudo();
+    notificar("Pedido enviado para a filial.");
 }
 
 function aprovarPedido(pedidoId, dataEntrega, quantidadeSelecionada = null) {
@@ -2255,6 +2386,7 @@ async function recusarItemPedido(pedidoId, produtoId) {
         }
 
         await carregarDadosSupabase();
+        abrirModalAnalisarPedido(pedido.id);
         notificar("Item recusado.");
         return;
     }
@@ -2264,6 +2396,7 @@ async function recusarItemPedido(pedidoId, produtoId) {
     atualizarSituacaoDoPedido(pedido);
     salvarEstado();
     renderizarTudo();
+    abrirModalAnalisarPedido(pedido.id);
     notificar("Item recusado.");
 }
 
@@ -2683,6 +2816,10 @@ elementos.formularioPedido.addEventListener("submit", (evento) => {
 
 elementos.formularioEntrega.addEventListener("submit", (evento) => {
     evento.preventDefault();
+    if (elementos.entregaModo.value === "aprovar_item") {
+        aprovarItemPedido(elementos.entregaPedidoId.value, elementos.entregaQuantidade.value);
+        return;
+    }
     const dia = String(elementos.entregaDia.value).padStart(2, "0");
     const mes = String(elementos.entregaMes.value).padStart(2, "0");
     const ano = elementos.entregaAno.value;
@@ -2707,7 +2844,16 @@ elementos.formularioEntrega.addEventListener("submit", (evento) => {
         return;
     }
 
+    if (elementos.entregaModo.value === "enviar_pedido") {
+        enviarPedidoAnalisado(elementos.entregaPedidoId.value, dataSelecionada);
+        return;
+    }
+
     aprovarPedido(elementos.entregaPedidoId.value, dataSelecionada, elementos.campoEntregaQuantidade.hidden ? null : elementos.entregaQuantidade.value);
+});
+
+elementos.botaoEnviarPedidoAnalisado.addEventListener("click", () => {
+    abrirModalEnviarPedido(elementos.botaoEnviarPedidoAnalisado.dataset.pedidoId);
 });
 
 elementos.seletorPortal.addEventListener("change", () => {

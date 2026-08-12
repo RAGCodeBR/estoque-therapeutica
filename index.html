@@ -256,6 +256,7 @@
                             <select id="filtro-status-pedidos">
                                 <option value="">Todos os status</option>
                                 <option value="recusado">Recusado</option>
+                                <option value="aprovado">Aprovado</option>
                                 <option value="aguardando_compra">Aguardando compra</option>
                                 <option value="em_transito">A caminho</option>
                                 <option value="recebido">Recebido</option>
@@ -596,7 +597,7 @@
                     <small id="ajuda-entrega-quantidade"></small>
                 </label>
 
-                <div class="data-entrega-grid">
+                <div class="data-entrega-grid" id="campo-entrega-data">
                     <label for="entrega-dia">
                         <span>Dia</span>
                         <select id="entrega-dia" required></select>
@@ -628,6 +629,9 @@
             </div>
             <p class="texto-apoio">Escolha a ação individual de cada produto. Itens já analisados permanecem visíveis para acompanhamento.</p>
             <div id="lista-analisar-pedido" class="itens-pedido-resumo"></div>
+            <div class="acoes-formulario">
+                <button type="button" class="botao-principal" id="botao-enviar-pedido-analisado" disabled>Enviar pedido</button>
+            </div>
         </div>
     </div>
 
