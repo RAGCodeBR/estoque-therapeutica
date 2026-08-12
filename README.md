@@ -17,7 +17,7 @@ Protótipo de controle do Centro de Distribuição (CD) da Therapeutica, criado 
 - Entrada e saída de produtos com bloqueio de estoque negativo;
 - Alertas automáticos de estoque baixo;
 - Histórico de movimentações com saldo antes e depois;
-- Portais de demonstração para Matriz, Blumenau, Lucas e Sinop, além da visão do CD;
+- Portais de demonstração para Sorriso, Blumenau, Lucas e Sinop, além da visão do CD;
 - Estoque individual por filial;
 - Pedidos em lista: uma filial pode enviar vários produtos na mesma solicitação, com estoque atual obrigatório para cada item;
 - Aprovação, recusa ou espera de compra para pedidos;

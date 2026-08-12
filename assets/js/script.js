@@ -18,7 +18,7 @@ function conectarSupabase() {
     return Boolean(clienteSupabase);
 }
 const FILIAIS_PADRAO = [
-    { id: "matriz", nome: "Matriz", cidade: "Sede administrativa" },
+    { id: "matriz", nome: "Sorriso", cidade: "Sorriso, MT" },
     { id: "blumenau", nome: "Blumenau", cidade: "Blumenau, SC" },
     { id: "lucas", nome: "Lucas", cidade: "Lucas do Rio Verde, MT" },
     { id: "sinop", nome: "Sinop", cidade: "Sinop, MT" }
@@ -513,6 +513,14 @@ function normalizarPedido(pedido) {
     };
 }
 
+function normalizarFilial(filial) {
+    const dados = filial && typeof filial === "object" ? filial : {};
+    if (dados.id === "matriz") {
+        return { ...dados, nome: "Sorriso", cidade: "Sorriso, MT" };
+    }
+    return dados;
+}
+
 function normalizarEstado(dados) {
     const base = estadoPadrao();
     const fonte = dados && typeof dados === "object" ? dados : {};
@@ -525,7 +533,7 @@ function normalizarEstado(dados) {
     base.produtos = produtos.map(normalizarProduto).filter((produto) => produto.nome);
     base.movimentacoes = movimentacoes.map(normalizarMovimentacao);
     base.pedidos = pedidos.map(normalizarPedido);
-    base.filiais = FILIAIS_PADRAO.map((filial) => ({ ...filial, ...filiaisPorId.get(filial.id) }));
+    base.filiais = FILIAIS_PADRAO.map((filial) => normalizarFilial({ ...filial, ...filiaisPorId.get(filial.id) }));
     base.estoqueFiliais = fonte.estoqueFiliais && typeof fonte.estoqueFiliais === "object"
         ? fonte.estoqueFiliais
         : {};
@@ -769,7 +777,7 @@ async function carregarDadosSupabase() {
     estado = {
         ...estadoPadrao(),
         produtos: [...produtosPorId.values()],
-        filiais: filiais.data.map((filial) => ({ id: filial.id, nome: filial.nome, cidade: filial.cidade })),
+        filiais: filiais.data.map((filial) => normalizarFilial({ id: filial.id, nome: filial.nome, cidade: filial.cidade })),
         pedidos: pedidos.data.map((pedido) => ({
             id: pedido.id, filialId: pedido.filial_id,
             itens: pedido.itens.map((item) => {

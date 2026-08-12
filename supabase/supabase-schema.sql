@@ -85,7 +85,7 @@ create index if not exists movimentacoes_criado_em_idx on public.movimentacoes (
 create index if not exists pedidos_filial_id_idx on public.pedidos (filial_id);
 
 insert into public.filiais (id, nome, cidade) values
-  ('matriz', 'Matriz', 'Sede administrativa'),
+  ('matriz', 'Sorriso', 'Sorriso, MT'),
   ('blumenau', 'Blumenau', 'Blumenau, SC'),
   ('lucas', 'Lucas', 'Lucas do Rio Verde, MT'),
   ('sinop', 'Sinop', 'Sinop, MT')
