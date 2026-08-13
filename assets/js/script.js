@@ -133,7 +133,6 @@ const elementos = {
     itemPedidoProduto: document.querySelector("#item-pedido-produto"),
     itemPedidoEstoque: document.querySelector("#item-pedido-estoque"),
     itemPedidoQuantidade: document.querySelector("#item-pedido-quantidade"),
-    itemPedidoObservacao: document.querySelector("#item-pedido-observacao"),
     mensagemItemPedido: document.querySelector("#mensagem-item-pedido"),
     itensCarrinhoPedido: document.querySelector("#itens-carrinho-pedido"),
     quantidadeItensCarrinho: document.querySelector("#quantidade-itens-carrinho"),
@@ -1568,7 +1567,6 @@ function renderizarCarrinhoPedido() {
                 <div>
                     <strong>${escaparHTML(item.produtoNome)}</strong>
                     <span>Estoque atual: ${formatarNumero(item.estoqueInformado)} · Solicitação: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span>
-                    ${item.observacao ? `<span>${escaparHTML(item.observacao)}</span>` : ""}
                 </div>
                 <button type="button" class="botao-remover-item" data-acao="remover-item-pedido" data-indice-item="${indice}">Remover</button>
             </div>
@@ -1936,7 +1934,7 @@ function enviarPedidoAnalisado(pedidoId, dataEntrega) {
         produto.quantidade -= item.quantidadeEnviada;
         produto.atualizadoEm = agora;
         item.situacao = "em_transito";
-        registrarMovimentacao({ produto, tipo: "transferencia", quantidade: item.quantidadeEnviada, saldoAntes, saldoDepois: produto.quantidade, observacao: item.observacao || pedido.observacao || `Pedido enviado pelo CD em ${formatarDataSimples(dataEntrega)}.`, filialId: pedido.filialId, pedidoId: pedido.id });
+        registrarMovimentacao({ produto, tipo: "transferencia", quantidade: item.quantidadeEnviada, saldoAntes, saldoDepois: produto.quantidade, observacao: pedido.observacao || `Pedido enviado pelo CD em ${formatarDataSimples(dataEntrega)}.`, filialId: pedido.filialId, pedidoId: pedido.id });
     });
     atualizarSituacaoDoPedido(pedido);
     pedido.recebidoEm = null;
@@ -2011,7 +2009,7 @@ function aprovarPedido(pedidoId, dataEntrega, quantidadeSelecionada = null) {
             quantidade: item.quantidadeEnviada,
             saldoAntes,
             saldoDepois: produto.quantidade,
-            observacao: item.observacao || pedido.observacao || `Envio aprovado para entrega em ${formatarDataSimples(dataEntrega)}.`,
+            observacao: pedido.observacao || `Envio aprovado para entrega em ${formatarDataSimples(dataEntrega)}.`,
             filialId: pedido.filialId,
             pedidoId: pedido.id
         });
@@ -2076,7 +2074,7 @@ function receberCompraMatriz(pedidoId, dataEntrega) {
             quantidade: item.quantidadeSolicitada,
             saldoAntes: saldoAntesEnvio,
             saldoDepois: produto.quantidade,
-            observacao: item.observacao || pedido.observacao || `Envio criado após recebimento da compra. Entrega prevista: ${formatarDataSimples(dataEntrega)}.`,
+            observacao: pedido.observacao || `Envio criado após recebimento da compra. Entrega prevista: ${formatarDataSimples(dataEntrega)}.`,
             filialId: pedido.filialId,
             pedidoId: pedido.id
         });
@@ -2872,7 +2870,6 @@ elementos.formularioItemPedido.addEventListener("submit", (evento) => {
     const produto = buscarProduto(elementos.itemPedidoProduto.value);
     const estoqueInformado = Number(elementos.itemPedidoEstoque.value);
     const quantidadeSolicitada = Number(elementos.itemPedidoQuantidade.value);
-    const observacao = elementos.itemPedidoObservacao.value.trim();
 
     elementos.mensagemItemPedido.textContent = "";
 
@@ -2896,8 +2893,7 @@ elementos.formularioItemPedido.addEventListener("submit", (evento) => {
         produtoNome: produto.nome,
         unidade: produto.unidade,
         estoqueInformado,
-        quantidadeSolicitada,
-        observacao
+        quantidadeSolicitada
     });
 
     elementos.formularioItemPedido.reset();
