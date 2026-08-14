@@ -670,11 +670,15 @@ async function sincronizarPedidos(pedidos, pedidosAnteriores) {
 }
 
 function pedidoParaBanco(pedido) {
-    return { id: pedido.id, filial_id: pedido.filialId, observacao: pedido.observacao || "", observacao_matriz: pedido.observacaoMatriz || "", situacao: pedido.situacao, compra_prevista: pedido.compraPrevista || null, compra_recebida_em: pedido.compraRecebidaEm || null, entrega_prevista: pedido.entregaPrevista || null, recebido_em: pedido.recebidoEm || null, criado_em: pedido.criadoEm, analisado_em: pedido.analisadoEm || null, atualizado_em: pedido.atualizadoEm };
+    return { id: pedido.id, filial_id: pedido.filialId, observacao: pedido.observacao || "", observacao_matriz: pedido.observacaoMatriz || "", situacao: situacaoParaBanco(pedido.situacao), compra_prevista: pedido.compraPrevista || null, compra_recebida_em: pedido.compraRecebidaEm || null, entrega_prevista: pedido.entregaPrevista || null, recebido_em: pedido.recebidoEm || null, criado_em: pedido.criadoEm, analisado_em: pedido.analisadoEm || null, atualizado_em: pedido.atualizadoEm };
+}
+
+function situacaoParaBanco(situacao) {
+    return situacao === "aprovado" ? "pendente" : situacao;
 }
 
 function itensParaBanco(pedidos) {
-    return pedidos.flatMap((pedido) => itensDoPedido(pedido).map((item) => ({ pedido_id: pedido.id, produto_id: item.produtoId, estoque_informado: item.estoqueInformado, quantidade_solicitada: item.quantidadeSolicitada, quantidade_enviada: item.quantidadeEnviada || null, observacao: item.observacao || "", situacao: item.situacao || pedido.situacao || "pendente", observacao_matriz: item.observacaoMatriz || "", recebido_em: item.recebidoEm || null })));
+    return pedidos.flatMap((pedido) => itensDoPedido(pedido).map((item) => ({ pedido_id: pedido.id, produto_id: item.produtoId, estoque_informado: item.estoqueInformado, quantidade_solicitada: item.quantidadeSolicitada, quantidade_enviada: item.quantidadeEnviada || null, observacao: item.observacao || "", situacao: situacaoParaBanco(item.situacao || pedido.situacao || "pendente"), observacao_matriz: item.observacaoMatriz || "", recebido_em: item.recebidoEm || null })));
 }
 
 async function sincronizarEstadoNoSupabase() {
@@ -892,14 +896,18 @@ function situacaoDoItemPedido(item, pedido) {
         : situacao;
 }
 
+function situacaoDoPedido(pedido) {
+    const situacoes = itensDoPedido(pedido).map((item) => situacaoDoItemPedido(item, pedido));
+    if (situacoes.every((situacao) => situacao === "recusado")) return "recusado";
+    if (situacoes.every((situacao) => situacao === "recebido" || situacao === "recusado")) return "recebido";
+    if (situacoes.includes("em_transito")) return "em_transito";
+    if (situacoes.includes("aprovado")) return "aprovado";
+    if (situacoes.includes("aguardando_compra")) return "aguardando_compra";
+    return "pendente";
+}
+
 function atualizarSituacaoDoPedido(pedido) {
-    const situacoes = itensDoPedido(pedido).map((item) => item.situacao || pedido.situacao || "pendente");
-    if (situacoes.every((situacao) => situacao === "recusado")) pedido.situacao = "recusado";
-    else if (situacoes.every((situacao) => situacao === "recebido" || situacao === "recusado")) pedido.situacao = "recebido";
-    else if (situacoes.includes("em_transito")) pedido.situacao = "em_transito";
-    else if (situacoes.includes("aprovado")) pedido.situacao = "aprovado";
-    else if (situacoes.includes("aguardando_compra")) pedido.situacao = "aguardando_compra";
-    else pedido.situacao = "pendente";
+    pedido.situacao = situacaoDoPedido(pedido);
     pedido.atualizadoEm = new Date().toISOString();
 }
 
@@ -1392,13 +1400,14 @@ function renderizarEstoqueBaixo() {
 function renderizarPedidos() {
     const statusSelecionado = elementos.filtroStatusPedidos.value;
     const pedidos = [...estado.pedidos]
-        .filter((pedido) => !statusSelecionado || pedido.situacao === statusSelecionado)
+        .filter((pedido) => !statusSelecionado || situacaoDoPedido(pedido) === statusSelecionado)
         .sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
 
     elementos.tabelaPedidos.innerHTML = pedidos.length
         ? pedidos.map((pedido) => {
             const filial = buscarFilial(pedido.filialId);
             const itens = itensDoPedido(pedido);
+            const situacao = situacaoDoPedido(pedido);
             const compra = pedido.compraPrevista ? `Chegada no CD: ${formatarDataSimples(pedido.compraPrevista)}` : "";
             const entrega = pedido.entregaPrevista ? `Entrega prevista: ${formatarDataSimples(pedido.entregaPrevista)}` : "";
             const listaItens = itens.map((item) => `
@@ -1417,7 +1426,7 @@ function renderizarPedidos() {
                     <td>${formatarData(pedido.criadoEm)}</td>
                     <td><strong>${escaparHTML(filial?.nome || "Filial não identificada")}</strong></td>
                     <td>${listaItens}${pedido.observacao ? `<span class="detalhe-celula">${escaparHTML(pedido.observacao)}</span>` : ""}</td>
-                    <td><span class="selo-tipo ${classeSituacaoPedido(pedido.situacao)}">${textoSituacaoPedido(pedido.situacao)}</span>${compra ? `<span class="detalhe-celula">${escaparHTML(compra)}</span>` : ""}${entrega ? `<span class="detalhe-celula">${escaparHTML(entrega)}</span>` : ""}</td>
+                    <td><span class="selo-tipo ${classeSituacaoPedido(situacao)}">${textoSituacaoPedido(situacao)}</span>${compra ? `<span class="detalhe-celula">${escaparHTML(compra)}</span>` : ""}${entrega ? `<span class="detalhe-celula">${escaparHTML(entrega)}</span>` : ""}</td>
                     <td>${acoes}</td>
                 </tr>
             `;
