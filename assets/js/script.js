@@ -54,6 +54,7 @@ const elementos = {
     dashboardAlertas: document.querySelector("#dashboard-alertas"),
     buscaProdutos: document.querySelector("#busca-produtos"),
     filtroCategoria: document.querySelector("#filtro-categoria"),
+    filtroStatusProdutos: document.querySelector("#filtro-status-produtos"),
     botaoOrdenarQuantidade: document.querySelector("#ordenar-quantidade"),
     tabelaProdutos: document.querySelector("#tabela-produtos"),
     tabelaEstoqueBaixo: document.querySelector("#tabela-estoque-baixo"),
@@ -844,6 +845,20 @@ function produtosAtivos() {
     return estado.produtos.filter((produto) => produto.ativo);
 }
 
+function produtosDoStatusSelecionado() {
+    const status = elementos.filtroStatusProdutos.value;
+
+    if (status === "arquivados") {
+        return estado.produtos.filter((produto) => !produto.ativo);
+    }
+
+    if (status === "todos") {
+        return estado.produtos;
+    }
+
+    return produtosAtivos();
+}
+
 function buscarProduto(id) {
     return estado.produtos.find((produto) => produto.id === id);
 }
@@ -1254,7 +1269,7 @@ function renderizarDashboard() {
 
 function renderizarFiltroCategorias() {
     const valorAtual = elementos.filtroCategoria.value;
-    const categorias = [...new Set(produtosAtivos().map((produto) => produto.categoria))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const categorias = [...new Set(produtosDoStatusSelecionado().map((produto) => produto.categoria))].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
     elementos.filtroCategoria.innerHTML = `
         <option value="">Todas as categorias</option>
@@ -1269,7 +1284,7 @@ function renderizarFiltroCategorias() {
 function renderizarProdutos() {
     const busca = elementos.buscaProdutos.value.trim().toLocaleLowerCase("pt-BR");
     const categoria = elementos.filtroCategoria.value;
-    const produtos = produtosAtivos()
+    const produtos = produtosDoStatusSelecionado()
         .filter((produto) => {
             const texto = `${produto.nome} ${produto.categoria} ${produto.codigo}`.toLocaleLowerCase("pt-BR");
             return (!busca || texto.includes(busca)) && (!categoria || produto.categoria === categoria);
@@ -1286,8 +1301,17 @@ function renderizarProdutos() {
 
     elementos.tabelaProdutos.innerHTML = produtos.length
         ? produtos.map((produto) => {
-            const status = situacaoProduto(produto);
+            const status = produto.ativo ? situacaoProduto(produto) : { classe: "status-arquivado", texto: "Arquivado" };
             const codigo = produto.codigo ? `<span class="codigo-produto">${escaparHTML(produto.codigo)}</span>` : "";
+            const dataArquivamento = produto.arquivadoEm ? `<span class="detalhe-celula">Arquivado em ${formatarData(produto.arquivadoEm)}</span>` : "";
+            const acoes = produto.ativo
+                ? `
+                    <button type="button" class="botao-acao acao-entrada" data-acao="movimentar" data-produto-id="${produto.id}" data-tipo="entrada">Entrada</button>
+                    <button type="button" class="botao-acao acao-saida" data-acao="movimentar" data-produto-id="${produto.id}" data-tipo="saida">Saída</button>
+                    <button type="button" class="botao-acao" data-acao="editar-produto" data-produto-id="${produto.id}">Editar</button>
+                    <button type="button" class="botao-acao acao-perigo" data-acao="arquivar-produto" data-produto-id="${produto.id}">Arquivar</button>
+                `
+                : `<button type="button" class="botao-acao acao-restaurar" data-acao="restaurar-produto" data-produto-id="${produto.id}">Restaurar</button>`;
 
             return `
                 <tr>
@@ -1296,14 +1320,9 @@ function renderizarProdutos() {
                     <td><strong>${formatarNumero(produto.quantidade)}</strong></td>
                     <td>${formatarNumero(produto.estoqueMinimo)}</td>
                     <td>${escaparHTML(produto.unidade)}</td>
-                    <td><span class="selo-status ${status.classe}">${status.texto}</span></td>
+                    <td><span class="selo-status ${status.classe}">${status.texto}</span>${dataArquivamento}</td>
                     <td>
-                        <div class="acoes-tabela">
-                            <button type="button" class="botao-acao acao-entrada" data-acao="movimentar" data-produto-id="${produto.id}" data-tipo="entrada">Entrada</button>
-                            <button type="button" class="botao-acao acao-saida" data-acao="movimentar" data-produto-id="${produto.id}" data-tipo="saida">Saída</button>
-                            <button type="button" class="botao-acao" data-acao="editar-produto" data-produto-id="${produto.id}">Editar</button>
-                            <button type="button" class="botao-acao acao-perigo" data-acao="arquivar-produto" data-produto-id="${produto.id}">Arquivar</button>
-                        </div>
+                        <div class="acoes-tabela">${acoes}</div>
                     </td>
                 </tr>
             `;
@@ -1872,6 +1891,19 @@ function arquivarProduto(produtoId) {
     salvarEstado();
     renderizarTudo();
     notificar("Produto arquivado. O histórico foi preservado.");
+}
+
+function restaurarProduto(produtoId) {
+    const produto = buscarProduto(produtoId);
+
+    if (!produto || produto.ativo) return;
+
+    produto.ativo = true;
+    produto.arquivadoEm = null;
+    produto.atualizadoEm = new Date().toISOString();
+    salvarEstado();
+    renderizarTudo();
+    notificar("Produto restaurado ao estoque ativo.");
 }
 
 function aprovarItemPedido(pedidoId, quantidadeSelecionada) {
@@ -2518,6 +2550,9 @@ function lidarComAcao(acao, elemento) {
         case "arquivar-produto":
             arquivarProduto(elemento.dataset.produtoId);
             break;
+        case "restaurar-produto":
+            restaurarProduto(elemento.dataset.produtoId);
+            break;
         case "novo-pedido":
             abrirModalPedido();
             break;
@@ -2633,6 +2668,10 @@ document.addEventListener("keydown", (evento) => {
 
 elementos.buscaProdutos.addEventListener("input", renderizarProdutos);
 elementos.filtroCategoria.addEventListener("change", renderizarProdutos);
+elementos.filtroStatusProdutos.addEventListener("change", () => {
+    renderizarFiltroCategorias();
+    renderizarProdutos();
+});
 elementos.botaoOrdenarQuantidade.addEventListener("click", () => {
     ordenacaoQuantidade = ordenacaoQuantidade === "crescente" ? "decrescente" : "crescente";
     const crescente = ordenacaoQuantidade === "crescente";

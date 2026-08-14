@@ -632,6 +632,10 @@ main {
     border-radius: 12px;
 }
 
+.filtros-produtos {
+    grid-template-columns: minmax(280px, 2fr) minmax(170px, 1fr) minmax(170px, 1fr);
+}
+
 .filtros label,
 .formulario-pagina label,
 .formulario-modal label {
@@ -711,6 +715,13 @@ th {
     font-weight: 800;
     letter-spacing: 0.5px;
     text-transform: uppercase;
+}
+
+#pagina-produtos th:nth-child(3),
+#pagina-produtos th:nth-child(4),
+#pagina-produtos td:nth-child(3),
+#pagina-produtos td:nth-child(4) {
+    text-align: center;
 }
 
 .cabecalho-ordenavel {
@@ -797,6 +808,11 @@ tbody tr:last-child td {
     background: #ffe9e4;
 }
 
+.status-arquivado {
+    color: var(--marrom-claro);
+    background: #eee9e5;
+}
+
 .tipo-transferencia,
 .tipo-pendente,
 .tipo-em_transito,
@@ -825,6 +841,7 @@ tbody tr:last-child td {
 .botao-acao.acao-entrada { color: var(--verde); background: var(--verde-claro); border-color: #cdebd9; }
 .botao-acao.acao-saida { color: var(--vermelho); background: var(--salmão-claro); border-color: #f1d4cc; }
 .botao-acao.acao-perigo { color: var(--vermelho); }
+.botao-acao.acao-restaurar { color: var(--verde); background: var(--verde-claro); border-color: #cdebd9; }
 .botao-acao.acao-aprovar { color: var(--verde); background: var(--verde-claro); border-color: #cdebd9; }
 
 .formulario-pagina-container {
@@ -1373,6 +1390,8 @@ small {
     .grade-configuracoes { grid-template-columns: 1fr; }
     .pedido-lista-layout { grid-template-columns: 1fr; }
     .aviso-fluxo { max-width: none; text-align: left; }
+    .filtros-produtos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .filtros-produtos label:first-child { grid-column: 1 / -1; }
 }
 
 @media (max-width: 520px) {
@@ -1384,6 +1403,7 @@ small {
     .filtros,
     .campos-lado-a-lado,
     .data-entrega-grid { grid-template-columns: 1fr; }
+    .filtros-produtos label:first-child { grid-column: auto; }
     .modal-conteudo { padding: 21px; }
     .acoes-formulario { flex-direction: column-reverse; }
     .acoes-formulario .botao-principal,

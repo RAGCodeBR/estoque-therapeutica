@@ -128,7 +128,7 @@
                         <button class="botao-principal" type="button" data-acao="novo-produto"><span class="icone icone-plus" aria-hidden="true"></span>Cadastrar produto</button>
                     </div>
 
-                    <section class="filtros" aria-label="Filtros de produtos">
+                    <section class="filtros filtros-produtos" aria-label="Filtros de produtos">
                         <label>
                             <span>Buscar produto</span>
                             <input type="search" id="busca-produtos" placeholder="Nome ou categoria">
@@ -137,6 +137,14 @@
                             <span>Categoria</span>
                             <select id="filtro-categoria">
                                 <option value="">Todas as categorias</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Status</span>
+                            <select id="filtro-status-produtos">
+                                <option value="ativos">Ativos</option>
+                                <option value="arquivados">Arquivados</option>
+                                <option value="todos">Todos</option>
                             </select>
                         </label>
                     </section>
