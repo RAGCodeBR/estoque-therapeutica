@@ -713,6 +713,34 @@ th {
     text-transform: uppercase;
 }
 
+.cabecalho-ordenavel {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.botao-ordenacao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    color: var(--marrom-claro);
+    background: transparent;
+    border: 1px solid var(--borda);
+    border-radius: 5px;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.botao-ordenacao:hover,
+.botao-ordenacao:focus-visible {
+    color: var(--salmão);
+    border-color: var(--salmão);
+    outline: none;
+}
+
 td {
     font-size: 14px;
 }

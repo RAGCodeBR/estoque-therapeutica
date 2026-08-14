@@ -54,6 +54,7 @@ const elementos = {
     dashboardAlertas: document.querySelector("#dashboard-alertas"),
     buscaProdutos: document.querySelector("#busca-produtos"),
     filtroCategoria: document.querySelector("#filtro-categoria"),
+    botaoOrdenarQuantidade: document.querySelector("#ordenar-quantidade"),
     tabelaProdutos: document.querySelector("#tabela-produtos"),
     tabelaEstoqueBaixo: document.querySelector("#tabela-estoque-baixo"),
     tabelaPedidos: document.querySelector("#tabela-pedidos"),
@@ -161,6 +162,7 @@ const elementos = {
 
 let paginaAtual = "dashboard";
 let tipoMovimentacaoAtual = "entrada";
+let ordenacaoQuantidade = "crescente";
 let produtoSelecionadoMovimentacao = "";
 let itensXmlMovimentacao = [];
 let indiceItemXmlSelecionado = null;
@@ -1272,7 +1274,15 @@ function renderizarProdutos() {
             const texto = `${produto.nome} ${produto.categoria} ${produto.codigo}`.toLocaleLowerCase("pt-BR");
             return (!busca || texto.includes(busca)) && (!categoria || produto.categoria === categoria);
         })
-        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+        .sort((a, b) => {
+            const diferencaQuantidade = a.quantidade - b.quantidade;
+
+            if (diferencaQuantidade !== 0) {
+                return ordenacaoQuantidade === "crescente" ? diferencaQuantidade : -diferencaQuantidade;
+            }
+
+            return a.nome.localeCompare(b.nome, "pt-BR");
+        });
 
     elementos.tabelaProdutos.innerHTML = produtos.length
         ? produtos.map((produto) => {
@@ -2623,6 +2633,16 @@ document.addEventListener("keydown", (evento) => {
 
 elementos.buscaProdutos.addEventListener("input", renderizarProdutos);
 elementos.filtroCategoria.addEventListener("change", renderizarProdutos);
+elementos.botaoOrdenarQuantidade.addEventListener("click", () => {
+    ordenacaoQuantidade = ordenacaoQuantidade === "crescente" ? "decrescente" : "crescente";
+    const crescente = ordenacaoQuantidade === "crescente";
+
+    elementos.botaoOrdenarQuantidade.textContent = crescente ? "↑" : "↓";
+    elementos.botaoOrdenarQuantidade.setAttribute("aria-label", `Ordenar produtos por quantidade, ${ordenacaoQuantidade}`);
+    elementos.botaoOrdenarQuantidade.title = `Ordenar por quantidade: ${ordenacaoQuantidade}`;
+    elementos.botaoOrdenarQuantidade.setAttribute("aria-pressed", String(!crescente));
+    renderizarProdutos();
+});
 elementos.buscaHistorico.addEventListener("input", renderizarHistorico);
 elementos.filtroHistorico.addEventListener("change", renderizarHistorico);
 elementos.filtroStatusPedidos.addEventListener("change", renderizarPedidos);
