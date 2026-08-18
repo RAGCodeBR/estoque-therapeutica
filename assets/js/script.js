@@ -23,6 +23,16 @@ const FILIAIS_PADRAO = [
     { id: "lucas", nome: "Lucas", cidade: "Lucas do Rio Verde, MT" },
     { id: "sinop", nome: "Sinop", cidade: "Sinop, MT" }
 ];
+const CATEGORIAS_ESTOQUE = [
+    "Administrativo",
+    "Dermocosméticos",
+    "Embalagens",
+    "Higiene",
+    "Insumos",
+    "Limpeza",
+    "Medicamentos",
+    "Outros"
+];
 const titulosPaginas = {
     dashboard: "Dashboard",
     produtos: "Produtos",
@@ -1266,7 +1276,7 @@ function renderizarDashboard() {
 
 function renderizarFiltroCategorias() {
     const valorAtual = elementos.filtroCategoria.value;
-    const categorias = [...new Set(produtosDoStatusSelecionado().map((produto) => produto.categoria))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const categorias = CATEGORIAS_ESTOQUE;
 
     elementos.filtroCategoria.innerHTML = `
         <option value="">Todas as categorias</option>
