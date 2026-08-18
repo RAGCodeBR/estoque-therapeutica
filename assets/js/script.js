@@ -552,17 +552,6 @@ function carregarEstado() {
 
     if (salvo) {
         const normalizado = normalizarEstado(salvo);
-        const vazio = normalizado.produtos.length === 0
-            && normalizado.movimentacoes.length === 0
-            && normalizado.pedidos.length === 0
-            && salvo.demoDesativado !== true;
-
-        if (vazio) {
-            const demo = criarEstadoDemo();
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(demo));
-            return demo;
-        }
-
         return normalizado;
     }
 
@@ -580,7 +569,7 @@ function carregarEstado() {
     const migrado = temDadosAntigos ? normalizarEstado({
         produtos: Array.isArray(produtosAntigos) ? produtosAntigos : [],
         movimentacoes: Array.isArray(movimentacoesAntigas) ? movimentacoesAntigas : []
-    }) : criarEstadoDemo();
+    }) : estadoPadrao();
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(migrado));
     return migrado;
@@ -1290,11 +1279,11 @@ function renderizarFiltroCategorias() {
 }
 
 function renderizarProdutos() {
-    const busca = elementos.buscaProdutos.value.trim().toLocaleLowerCase("pt-BR");
+    const busca = textoNormalizado(elementos.buscaProdutos.value);
     const categoria = elementos.filtroCategoria.value;
     const produtos = produtosDoStatusSelecionado()
         .filter((produto) => {
-            const texto = `${produto.nome} ${produto.categoria} ${produto.codigo}`.toLocaleLowerCase("pt-BR");
+            const texto = textoNormalizado(`${produto.nome} ${produto.categoria} ${produto.codigo}`);
             return (!busca || texto.includes(busca)) && (!categoria || produto.categoria === categoria);
         })
         .sort((a, b) => {
@@ -3068,7 +3057,7 @@ elementos.formularioUsuario.addEventListener("submit", async (evento) => {
 });
 elementos.botaoExportar.addEventListener("click", exportarBackup);
 elementos.arquivoImportar.addEventListener("change", importarBackup);
-elementos.botaoDadosDemo.addEventListener("click", carregarDadosDemo);
+elementos.botaoDadosDemo?.addEventListener("click", carregarDadosDemo);
 elementos.botaoLimparDados.addEventListener("click", limparDados);
 
 elementos.seletorPortal.value = portalAtual;
