@@ -156,11 +156,16 @@ const elementos = {
     filtroStatusMeusPedidos: document.querySelector("#filtro-status-meus-pedidos"),
     modalUsuario: document.querySelector("#modal-usuario"),
     formularioUsuario: document.querySelector("#formulario-usuario"),
+    botaoNovoUsuario: document.querySelector("#botao-novo-usuario"),
+    tituloModalUsuario: document.querySelector("#titulo-modal-usuario"),
     usuarioId: document.querySelector("#usuario-id"),
     usuarioEmail: document.querySelector("#usuario-email"),
     usuarioNome: document.querySelector("#usuario-nome"),
+    campoSenhaInicial: document.querySelector("#campo-senha-inicial"),
+    usuarioSenhaInicial: document.querySelector("#usuario-senha-inicial"),
     usuarioPapel: document.querySelector("#usuario-papel"),
     usuarioFilial: document.querySelector("#usuario-filial"),
+    botaoSalvarUsuario: document.querySelector("#botao-salvar-usuario"),
     mensagemUsuario: document.querySelector("#mensagem-usuario"),
     modalEstoqueFilial: document.querySelector("#modal-estoque-filial"),
     tituloModalEstoqueFilial: document.querySelector("#titulo-modal-estoque-filial"),
@@ -209,6 +214,7 @@ function recuperarNavegacaoAtual() {
 
 function aplicarPermissoesDoUsuario() {
     if (!perfilAtual) return;
+    if (elementos.botaoNovoUsuario) elementos.botaoNovoUsuario.hidden = !usuarioEhCD();
     if (usuarioEhCD()) {
         portalAtual = CENTRO_DISTRIBUICAO_ID;
         elementos.seletorPortal.disabled = false;
@@ -1655,10 +1661,29 @@ function abrirModalUsuario(id) {
     elementos.mensagemUsuario.textContent = "";
     elementos.usuarioId.value = usuario.id;
     elementos.usuarioEmail.value = usuario.email;
+    elementos.usuarioEmail.disabled = true;
     elementos.usuarioNome.value = usuario.nome || "";
+    elementos.campoSenhaInicial.hidden = true;
+    elementos.usuarioSenhaInicial.required = false;
     elementos.usuarioPapel.value = usuario.papel;
     elementos.usuarioFilial.value = usuario.filial_id || "";
     elementos.usuarioFilial.disabled = usuario.papel === "cd_admin";
+    elementos.tituloModalUsuario.textContent = "Editar usuário";
+    elementos.botaoSalvarUsuario.textContent = "Salvar alterações";
+    abrirModal(elementos.modalUsuario);
+}
+
+function abrirModalNovoUsuario() {
+    if (!usuarioEhCD()) return;
+    elementos.formularioUsuario.reset();
+    elementos.mensagemUsuario.textContent = "";
+    elementos.usuarioId.value = "";
+    elementos.usuarioEmail.disabled = false;
+    elementos.campoSenhaInicial.hidden = false;
+    elementos.usuarioSenhaInicial.required = true;
+    elementos.usuarioFilial.disabled = false;
+    elementos.tituloModalUsuario.textContent = "Novo usuário";
+    elementos.botaoSalvarUsuario.textContent = "Criar usuário";
     abrirModal(elementos.modalUsuario);
 }
 
@@ -2555,6 +2580,9 @@ function lidarComAcao(acao, elemento) {
         case "editar-usuario":
             abrirModalUsuario(elemento.dataset.usuarioId);
             break;
+        case "novo-usuario":
+            abrirModalNovoUsuario();
+            break;
         case "arquivar-produto":
             arquivarProduto(elemento.dataset.produtoId);
             break;
@@ -3054,11 +3082,26 @@ elementos.usuarioPapel.addEventListener("change", () => {
     if (administrador) elementos.usuarioFilial.value = "";
 });
 
+elementos.botaoNovoUsuario?.addEventListener("click", abrirModalNovoUsuario);
+
 elementos.formularioUsuario.addEventListener("submit", async (evento) => {
     evento.preventDefault();
     const papel = elementos.usuarioPapel.value;
     const filialId = papel === "cd_admin" ? null : elementos.usuarioFilial.value;
     if (papel === "filial" && !filialId) { elementos.mensagemUsuario.textContent = "Selecione a filial do usuário."; return; }
+    if (!elementos.usuarioId.value) {
+        const senha = elementos.usuarioSenhaInicial.value;
+        if (senha.length < 8) { elementos.mensagemUsuario.textContent = "A senha inicial deve ter pelo menos 8 caracteres."; return; }
+        elementos.mensagemUsuario.textContent = "Criando usuário...";
+        const { error } = await clienteSupabase.functions.invoke("criar-usuario", {
+            body: { email: elementos.usuarioEmail.value.trim(), nome: elementos.usuarioNome.value.trim(), senha, papel, filial_id: filialId }
+        });
+        if (error) { console.error(error); elementos.mensagemUsuario.textContent = error.message || "Não foi possível criar o usuário."; return; }
+        fecharModal(elementos.modalUsuario);
+        notificar("Usuário criado. Informe a senha inicial por um canal seguro.");
+        await carregarUsuarios();
+        return;
+    }
     const { error } = await clienteSupabase.from("usuarios").update({ nome: elementos.usuarioNome.value.trim(), papel, filial_id: filialId }).eq("id", elementos.usuarioId.value);
     if (error) { console.error(error); elementos.mensagemUsuario.textContent = "Não foi possível salvar as alterações."; return; }
     fecharModal(elementos.modalUsuario);

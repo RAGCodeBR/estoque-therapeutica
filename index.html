@@ -442,6 +442,7 @@
                             <h2>Usuários</h2>
                             <p>Gerencie os perfis, papéis e filiais vinculadas ao acesso.</p>
                         </div>
+                        <button class="botao-principal" type="button" id="botao-novo-usuario"><span class="icone icone-plus" aria-hidden="true"></span>Novo usuário</button>
                     </div>
                     <section class="tabela-container">
                         <div class="tabela-responsiva">
@@ -650,16 +651,21 @@
             </div>
             <form id="formulario-usuario" class="formulario-modal">
                 <input type="hidden" id="usuario-id">
-                <label for="usuario-email">E-mail</label>
-                <input type="email" id="usuario-email" disabled>
+                <label for="usuario-email">Login (e-mail)</label>
+                <input type="email" id="usuario-email" required autocomplete="email">
                 <label for="usuario-nome">Nome</label>
                 <input type="text" id="usuario-nome" maxlength="120" required>
+                <div id="campo-senha-inicial" hidden>
+                    <label for="usuario-senha-inicial">Senha inicial</label>
+                    <input type="password" id="usuario-senha-inicial" minlength="8" autocomplete="new-password">
+                    <small>Definida pelo administrador. O usuário poderá alterá-la depois.</small>
+                </div>
                 <label for="usuario-papel">Papel</label>
                 <select id="usuario-papel" required><option value="filial">Filial</option><option value="cd_admin">Administrador do CD</option></select>
                 <label for="usuario-filial">Filial vinculada</label>
                 <select id="usuario-filial"><option value="">Sem filial</option><option value="matriz">Sorriso</option><option value="blumenau">Blumenau</option><option value="lucas">Lucas do Rio Verde</option><option value="sinop">Sinop</option></select>
                 <p class="mensagem-formulario" id="mensagem-usuario" aria-live="polite"></p>
-                <div class="acoes-formulario"><button type="button" class="botao-secundario" data-fechar-modal="modal-usuario">Cancelar</button><button type="submit" class="botao-principal">Salvar alterações</button></div>
+                <div class="acoes-formulario"><button type="button" class="botao-secundario" data-fechar-modal="modal-usuario">Cancelar</button><button type="submit" class="botao-principal" id="botao-salvar-usuario">Salvar alterações</button></div>
             </form>
         </div>
     </div>

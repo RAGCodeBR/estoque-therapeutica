@@ -1,3 +1,6 @@
+window.location.replace('./login.html');
+
+/*
 const btn = document.querySelector('#verSenha');
 const btnConfirm = document.querySelector('#verConfirmSenha');
 const inputSenha = document.querySelector('#senha');
@@ -40,3 +43,4 @@ formulario?.addEventListener('submit', async (evento) => {
     mensagem.style.color = '#486b34';
     mensagem.textContent = 'Conta criada. Verifique seu e-mail para confirmar o acesso.';
 });
+*/
