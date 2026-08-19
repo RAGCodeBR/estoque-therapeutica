@@ -27,13 +27,24 @@ function informar(texto, erro = true) {
     mensagem.style.color = erro ? '#a94332' : '#486b34';
 }
 
+function emailParaLogin(identificador) {
+    const valor = identificador.trim();
+    if (valor.includes("@")) return valor;
+    const login = valor.normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ".")
+        .replace(/^\.+|\.+$/g, "");
+    return `${login}@usuarios.therapeutica.local`;
+}
+
 formulario?.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     configurarPersistenciaSessao(manterConectado?.checked ?? true);
     const cliente = obterClienteSupabase();
     if (!cliente) return informar('Não foi possível carregar o serviço de login.');
     informar('Entrando...', false);
-    const { error } = await cliente.auth.signInWithPassword({ email: email.value.trim(), password: senha.value });
+    const { error } = await cliente.auth.signInWithPassword({ email: emailParaLogin(email.value), password: senha.value });
     if (error) return informar('E-mail ou senha inválidos.');
     window.location.replace('./index.html');
 });

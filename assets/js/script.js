@@ -1465,6 +1465,13 @@ function abrirModalAnalisarPedido(pedidoId) {
     abrirModal(elementos.modalAnalisarPedido);
 }
 
+function loginParaExibicao(email) {
+    const sufixoInterno = "@usuarios.therapeutica.local";
+    return String(email || "").endsWith(sufixoInterno)
+        ? String(email).slice(0, -sufixoInterno.length)
+        : String(email || "");
+}
+
 function renderizarNotificacaoPedidos() {
     const pendentes = estado.pedidos.filter((pedido) => itensDoPedido(pedido).some((item) => (item.situacao || pedido.situacao) === "pendente")).length;
     elementos.notificacaoPedidos.hidden = pendentes === 0;
@@ -1531,7 +1538,8 @@ function renderizarUsuarios() {
         ? usuarios.map((usuario) => {
             const filial = usuario.filial_id ? (buscarFilial(usuario.filial_id)?.nome || usuario.filial_id) : "—";
             const papel = usuario.papel === "cd_admin" ? "Administrador" : "Filial";
-            return `<tr><td>${escaparHTML(usuario.nome || "Sem nome")}</td><td>${escaparHTML(usuario.email)}</td><td><span class="selo-tipo ${usuario.papel === "cd_admin" ? "tipo-aprovado" : "tipo-pendente"}">${papel}</span></td><td>${escaparHTML(filial)}</td><td><button type="button" class="botao-acao" data-acao="editar-usuario" data-usuario-id="${usuario.id}">Editar</button></td></tr>`;
+            const podeExcluir = usuario.id !== usuarioAtual?.id;
+            return `<tr><td>${escaparHTML(usuario.nome || "Sem nome")}</td><td>${escaparHTML(loginParaExibicao(usuario.email))}</td><td><span class="selo-tipo ${usuario.papel === "cd_admin" ? "tipo-aprovado" : "tipo-pendente"}">${papel}</span></td><td>${escaparHTML(filial)}</td><td><button type="button" class="botao-acao" data-acao="editar-usuario" data-usuario-id="${usuario.id}">Editar</button>${podeExcluir ? `<button type="button" class="botao-acao" data-acao="excluir-usuario" data-usuario-id="${usuario.id}">Excluir</button>` : ""}</td></tr>`;
         }).join("")
         : "<tr><td colspan=\"5\" class=\"tabela-vazia\">Nenhum usuário encontrado.</td></tr>";
 }
@@ -1660,7 +1668,7 @@ function abrirModalUsuario(id) {
     elementos.formularioUsuario.reset();
     elementos.mensagemUsuario.textContent = "";
     elementos.usuarioId.value = usuario.id;
-    elementos.usuarioEmail.value = usuario.email;
+    elementos.usuarioEmail.value = loginParaExibicao(usuario.email);
     elementos.usuarioEmail.disabled = true;
     elementos.usuarioNome.value = usuario.nome || "";
     elementos.campoSenhaInicial.hidden = true;
@@ -1685,6 +1693,21 @@ function abrirModalNovoUsuario() {
     elementos.tituloModalUsuario.textContent = "Novo usuário";
     elementos.botaoSalvarUsuario.textContent = "Criar usuário";
     abrirModal(elementos.modalUsuario);
+}
+
+async function excluirUsuario(id) {
+    if (!usuarioEhCD() || id === usuarioAtual?.id) {
+        notificar("Você não pode excluir a própria conta.", "erro");
+        return;
+    }
+    const usuario = usuarios.find((item) => item.id === id);
+    if (!usuario) return;
+    if (!window.confirm(`Excluir permanentemente o acesso de ${usuario.nome || loginParaExibicao(usuario.email)}?`)) return;
+
+    const { error } = await clienteSupabase.functions.invoke("excluir-usuario", { body: { usuario_id: id } });
+    if (error) { console.error(error); notificar("Não foi possível excluir o usuário.", "erro"); return; }
+    notificar("Usuário excluído.");
+    await carregarUsuarios();
 }
 
 function abrirModalEstoqueFilial(filialId) {
@@ -2583,6 +2606,9 @@ function lidarComAcao(acao, elemento) {
         case "novo-usuario":
             abrirModalNovoUsuario();
             break;
+        case "excluir-usuario":
+            excluirUsuario(elemento.dataset.usuarioId);
+            break;
         case "arquivar-produto":
             arquivarProduto(elemento.dataset.produtoId);
             break;
@@ -3094,17 +3120,34 @@ elementos.formularioUsuario.addEventListener("submit", async (evento) => {
         if (senha.length < 8) { elementos.mensagemUsuario.textContent = "A senha inicial deve ter pelo menos 8 caracteres."; return; }
         elementos.mensagemUsuario.textContent = "Criando usuário...";
         const { error } = await clienteSupabase.functions.invoke("criar-usuario", {
-            body: { email: elementos.usuarioEmail.value.trim(), nome: elementos.usuarioNome.value.trim(), senha, papel, filial_id: filialId }
+            body: { login: elementos.usuarioEmail.value.trim(), nome: elementos.usuarioNome.value.trim(), senha, papel, filial_id: filialId }
         });
-        if (error) { console.error(error); elementos.mensagemUsuario.textContent = error.message || "Não foi possível criar o usuário."; return; }
+        if (error) {
+            console.error(error);
+            let mensagem = error.message || "Não foi possível criar o usuário.";
+            if (error.context instanceof Response) {
+                try {
+                    const resposta = await error.context.clone().json();
+                    mensagem = resposta.error || mensagem;
+                } catch { /* Mantém a mensagem padrão quando a resposta não for JSON. */ }
+            }
+            elementos.mensagemUsuario.textContent = mensagem;
+            return;
+        }
         fecharModal(elementos.modalUsuario);
         notificar("Usuário criado. Informe a senha inicial por um canal seguro.");
         await carregarUsuarios();
         return;
     }
-    const { error } = await clienteSupabase.from("usuarios").update({ nome: elementos.usuarioNome.value.trim(), papel, filial_id: filialId }).eq("id", elementos.usuarioId.value);
+    const usuarioEditadoId = elementos.usuarioId.value;
+    const alterouProprioPapel = usuarioAtual?.id === usuarioEditadoId && perfilAtual?.papel !== papel;
+    const { error } = await clienteSupabase.from("usuarios").update({ nome: elementos.usuarioNome.value.trim(), papel, filial_id: filialId }).eq("id", usuarioEditadoId);
     if (error) { console.error(error); elementos.mensagemUsuario.textContent = "Não foi possível salvar as alterações."; return; }
     fecharModal(elementos.modalUsuario);
+    if (alterouProprioPapel) {
+        notificar("Saia do sistema para aplicar a alteração.");
+        return;
+    }
     notificar("Usuário atualizado.");
     await carregarUsuarios();
 });

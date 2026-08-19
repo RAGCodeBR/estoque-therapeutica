@@ -447,7 +447,7 @@
                     <section class="tabela-container">
                         <div class="tabela-responsiva">
                             <table>
-                                <thead><tr><th>Usuário</th><th>E-mail</th><th>Papel</th><th>Filial</th><th>Ação</th></tr></thead>
+                                <thead><tr><th>Usuário</th><th>Login</th><th>Papel</th><th>Filial</th><th>Ação</th></tr></thead>
                                 <tbody id="tabela-usuarios"></tbody>
                             </table>
                         </div>
@@ -651,8 +651,8 @@
             </div>
             <form id="formulario-usuario" class="formulario-modal">
                 <input type="hidden" id="usuario-id">
-                <label for="usuario-email">Login (e-mail)</label>
-                <input type="email" id="usuario-email" required autocomplete="email">
+                <label for="usuario-email">Login</label>
+                <input type="text" id="usuario-email" required autocomplete="username" maxlength="40" placeholder="Exemplo: gabriel.silva">
                 <label for="usuario-nome">Nome</label>
                 <input type="text" id="usuario-nome" maxlength="120" required>
                 <div id="campo-senha-inicial" hidden>
