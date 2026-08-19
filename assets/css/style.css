@@ -844,6 +844,12 @@ tbody tr:last-child td {
 .botao-acao.acao-restaurar { color: var(--verde); background: var(--verde-claro); border-color: #cdebd9; }
 .botao-acao.acao-aprovar { color: var(--verde); background: var(--verde-claro); border-color: #cdebd9; }
 
+.acoes-usuario {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
 .formulario-pagina-container {
     max-width: 680px;
     padding: 25px;

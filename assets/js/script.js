@@ -1539,7 +1539,7 @@ function renderizarUsuarios() {
             const filial = usuario.filial_id ? (buscarFilial(usuario.filial_id)?.nome || usuario.filial_id) : "—";
             const papel = usuario.papel === "cd_admin" ? "Administrador" : "Filial";
             const podeExcluir = usuario.id !== usuarioAtual?.id;
-            return `<tr><td>${escaparHTML(usuario.nome || "Sem nome")}</td><td>${escaparHTML(loginParaExibicao(usuario.email))}</td><td><span class="selo-tipo ${usuario.papel === "cd_admin" ? "tipo-aprovado" : "tipo-pendente"}">${papel}</span></td><td>${escaparHTML(filial)}</td><td><button type="button" class="botao-acao" data-acao="editar-usuario" data-usuario-id="${usuario.id}">Editar</button>${podeExcluir ? `<button type="button" class="botao-acao" data-acao="excluir-usuario" data-usuario-id="${usuario.id}">Excluir</button>` : ""}</td></tr>`;
+            return `<tr><td>${escaparHTML(usuario.nome || "Sem nome")}</td><td>${escaparHTML(loginParaExibicao(usuario.email))}</td><td><span class="selo-tipo ${usuario.papel === "cd_admin" ? "tipo-aprovado" : "tipo-pendente"}">${papel}</span></td><td>${escaparHTML(filial)}</td><td><div class="acoes-usuario"><button type="button" class="botao-acao" data-acao="editar-usuario" data-usuario-id="${usuario.id}">Editar</button>${podeExcluir ? `<button type="button" class="botao-acao" data-acao="excluir-usuario" data-usuario-id="${usuario.id}">Excluir</button>` : ""}</div></td></tr>`;
         }).join("")
         : "<tr><td colspan=\"5\" class=\"tabela-vazia\">Nenhum usuário encontrado.</td></tr>";
 }
