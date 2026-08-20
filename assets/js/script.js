@@ -134,7 +134,17 @@ const elementos = {
     tituloModalAnalisarPedido: document.querySelector("#titulo-modal-analisar-pedido"),
     listaAnalisarPedido: document.querySelector("#lista-analisar-pedido"),
     botaoEnviarPedidoAnalisado: document.querySelector("#botao-enviar-pedido-analisado"),
+    menuPerfil: document.querySelector("#menu-perfil"),
+    botaoPerfil: document.querySelector("#botao-perfil"),
+    menuPerfilOpcoes: document.querySelector("#menu-perfil-opcoes"),
+    botaoAlterarSenha: document.querySelector("#botao-alterar-senha"),
     botaoSair: document.querySelector("#botao-sair"),
+    modalAlterarSenha: document.querySelector("#modal-alterar-senha"),
+    formularioAlterarSenha: document.querySelector("#formulario-alterar-senha"),
+    novaSenhaUsuario: document.querySelector("#nova-senha-usuario"),
+    confirmarNovaSenhaUsuario: document.querySelector("#confirmar-nova-senha-usuario"),
+    mensagemAlterarSenha: document.querySelector("#mensagem-alterar-senha"),
+    botaoSalvarNovaSenha: document.querySelector("#botao-salvar-nova-senha"),
     botaoExportar: document.querySelector("#botao-exportar"),
     arquivoImportar: document.querySelector("#arquivo-importar"),
     botaoDadosDemo: document.querySelector("#botao-dados-demo"),
@@ -993,6 +1003,19 @@ function abrirModal(modal) {
 function fecharModal(modal) {
     modal.classList.remove("modal-aberto");
     modal.setAttribute("aria-hidden", "true");
+}
+
+function fecharMenuPerfil() {
+    elementos.menuPerfilOpcoes.hidden = true;
+    elementos.botaoPerfil.setAttribute("aria-expanded", "false");
+}
+
+function abrirModalAlterarSenha() {
+    fecharMenuPerfil();
+    elementos.formularioAlterarSenha.reset();
+    elementos.mensagemAlterarSenha.textContent = "";
+    abrirModal(elementos.modalAlterarSenha);
+    elementos.novaSenhaUsuario.focus();
 }
 
 function atualizarPaginaMovimentacao() {
@@ -2700,6 +2723,8 @@ document.addEventListener("click", (evento) => {
     if (botaoAcao) {
         lidarComAcao(botaoAcao.dataset.acao, botaoAcao);
     }
+
+    if (!evento.target.closest("#menu-perfil")) fecharMenuPerfil();
 });
 
 elementos.listaAnalisarPedido?.addEventListener("click", (evento) => {
@@ -2710,7 +2735,7 @@ elementos.listaAnalisarPedido?.addEventListener("click", (evento) => {
     recusarItemPedido(botaoRecusar.dataset.pedidoId, botaoRecusar.dataset.produtoId);
 });
 
-[elementos.modalProduto, elementos.modalPedido, elementos.modalEntrega, elementos.modalAnalisarPedido, elementos.modalUsuario, elementos.modalEstoqueFilial, elementos.modalDetalhesPedido].forEach((modal) => {
+[elementos.modalProduto, elementos.modalPedido, elementos.modalEntrega, elementos.modalAnalisarPedido, elementos.modalUsuario, elementos.modalAlterarSenha, elementos.modalEstoqueFilial, elementos.modalDetalhesPedido].forEach((modal) => {
     modal.addEventListener("click", (evento) => {
         if (evento.target === modal) fecharModal(modal);
     });
@@ -2723,6 +2748,7 @@ document.addEventListener("keydown", (evento) => {
         fecharModal(elementos.modalEntrega);
         fecharModal(elementos.modalAnalisarPedido);
         fecharModal(elementos.modalUsuario);
+        fecharModal(elementos.modalAlterarSenha);
         fecharModal(elementos.modalEstoqueFilial);
         fecharModal(elementos.modalDetalhesPedido);
     }
@@ -3096,10 +3122,51 @@ elementos.botaoEnviarPedidoLista.addEventListener("click", async () => {
     navegar("meus-pedidos");
 });
 
+elementos.botaoPerfil.addEventListener("click", () => {
+    const aberto = !elementos.menuPerfilOpcoes.hidden;
+    elementos.menuPerfilOpcoes.hidden = aberto;
+    elementos.botaoPerfil.setAttribute("aria-expanded", String(!aberto));
+});
+
+elementos.botaoAlterarSenha.addEventListener("click", abrirModalAlterarSenha);
+
 elementos.botaoSair.addEventListener("click", async () => {
     if (!clienteSupabase) return;
     await clienteSupabase.auth.signOut();
     window.location.replace("./login.html");
+});
+
+elementos.formularioAlterarSenha.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    const novaSenha = elementos.novaSenhaUsuario.value;
+    const confirmarSenha = elementos.confirmarNovaSenhaUsuario.value;
+
+    if (novaSenha.length < 8) {
+        elementos.mensagemAlterarSenha.textContent = "A nova senha deve ter pelo menos 8 caracteres.";
+        return;
+    }
+    if (novaSenha !== confirmarSenha) {
+        elementos.mensagemAlterarSenha.textContent = "As senhas não coincidem.";
+        return;
+    }
+    if (!clienteSupabase || !usuarioAtual) {
+        elementos.mensagemAlterarSenha.textContent = "Não foi possível identificar sua sessão.";
+        return;
+    }
+
+    elementos.botaoSalvarNovaSenha.disabled = true;
+    elementos.mensagemAlterarSenha.textContent = "Salvando nova senha...";
+    const { error } = await clienteSupabase.auth.updateUser({ password: novaSenha });
+    elementos.botaoSalvarNovaSenha.disabled = false;
+
+    if (error) {
+        console.error(error);
+        elementos.mensagemAlterarSenha.textContent = "Não foi possível alterar sua senha. Tente novamente.";
+        return;
+    }
+
+    fecharModal(elementos.modalAlterarSenha);
+    notificar("Senha alterada com sucesso.");
 });
 
 elementos.usuarioPapel.addEventListener("change", () => {

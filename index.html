@@ -56,10 +56,15 @@
                             <option value="sinop">Filial Sinop</option>
                         </select>
                     </label>
-                    <button class="botao-secundario botao-sair" type="button" id="botao-sair" title="Encerrar sessão">
-                        <span class="icone icone-logout" aria-hidden="true"></span>
-                        <span>Sair</span>
-                    </button>
+                    <div class="menu-perfil" id="menu-perfil">
+                        <button class="botao-perfil" type="button" id="botao-perfil" aria-label="Abrir menu do usuário" aria-haspopup="true" aria-expanded="false">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path></svg>
+                        </button>
+                        <div class="menu-perfil-opcoes" id="menu-perfil-opcoes" role="menu" hidden>
+                            <button type="button" id="botao-alterar-senha" role="menuitem">Alterar senha</button>
+                            <button type="button" id="botao-sair" role="menuitem">Sair</button>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -666,6 +671,26 @@
                 <select id="usuario-filial"><option value="">Sem filial</option><option value="matriz">Sorriso</option><option value="blumenau">Blumenau</option><option value="lucas">Lucas do Rio Verde</option><option value="sinop">Sinop</option></select>
                 <p class="mensagem-formulario" id="mensagem-usuario" aria-live="polite"></p>
                 <div class="acoes-formulario"><button type="button" class="botao-secundario" data-fechar-modal="modal-usuario">Cancelar</button><button type="submit" class="botao-principal" id="botao-salvar-usuario">Salvar alterações</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="modal-alterar-senha" aria-hidden="true">
+        <div class="modal-conteudo" role="dialog" aria-modal="true" aria-labelledby="titulo-modal-alterar-senha">
+            <div class="modal-cabecalho">
+                <div><p class="subtitulo-modal">Minha conta</p><h2 id="titulo-modal-alterar-senha">Alterar senha</h2></div>
+                <button class="botao-fechar" type="button" data-fechar-modal="modal-alterar-senha" aria-label="Fechar">×</button>
+            </div>
+            <form id="formulario-alterar-senha" class="formulario-modal">
+                <label for="nova-senha-usuario">Nova senha</label>
+                <input type="password" id="nova-senha-usuario" minlength="8" autocomplete="new-password" required>
+                <label for="confirmar-nova-senha-usuario">Confirmar nova senha</label>
+                <input type="password" id="confirmar-nova-senha-usuario" minlength="8" autocomplete="new-password" required>
+                <p class="mensagem-formulario" id="mensagem-alterar-senha" aria-live="polite"></p>
+                <div class="acoes-formulario">
+                    <button type="button" class="botao-secundario" data-fechar-modal="modal-alterar-senha">Cancelar</button>
+                    <button type="submit" class="botao-principal" id="botao-salvar-nova-senha">Salvar nova senha</button>
+                </div>
             </form>
         </div>
     </div>
