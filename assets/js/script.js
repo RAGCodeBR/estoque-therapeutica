@@ -192,6 +192,7 @@ let ordenacaoQuantidade = "crescente";
 let produtoSelecionadoMovimentacao = "";
 let itensXmlMovimentacao = [];
 let indiceItemXmlSelecionado = null;
+let itensXmlRegistrados = new Set();
 let itensSelecionadosPedido = [];
 let pedidoEmAnaliseId = "";
 let portalAtual = CENTRO_DISTRIBUICAO_ID;
@@ -1035,6 +1036,7 @@ function atualizarDestinoDaMovimentacao() {
     elementos.movimentoFilial.disabled = entrada;
     elementos.campoMovimentoXml.hidden = !entrada;
     elementos.movimentoXml.disabled = !entrada;
+    atualizarSelecaoProdutoXml();
 }
 
 function textoNormalizado(valor) {
@@ -1061,10 +1063,29 @@ function encontrarProdutoDoXml(item) {
         || produtosAtivos().find((produto) => textoNormalizado(produto.nome) === nome);
 }
 
+function atualizarSelecaoProdutoXml() {
+    const item = itensXmlMovimentacao[indiceItemXmlSelecionado];
+    const produtoEncontrado = item && encontrarProdutoDoXml(item);
+    const bloquear = tipoMovimentacaoAtual === "entrada" && Boolean(produtoEncontrado) && !itensXmlRegistrados.has(indiceItemXmlSelecionado);
+
+    elementos.movimentoProduto.disabled = bloquear;
+    elementos.movimentoProduto.title = bloquear
+        ? "Produto identificado automaticamente pelo XML."
+        : "";
+}
+
 function atualizarBotaoCadastrarProdutoXml() {
     const item = itensXmlMovimentacao[indiceItemXmlSelecionado];
     const produtoEncontrado = item && encontrarProdutoDoXml(item);
-    elementos.botaoCadastrarProdutoXml.hidden = !item || Boolean(produtoEncontrado) || Boolean(elementos.movimentoProduto.value);
+    elementos.botaoCadastrarProdutoXml.hidden = !item || itensXmlRegistrados.has(indiceItemXmlSelecionado) || Boolean(produtoEncontrado) || Boolean(elementos.movimentoProduto.value);
+}
+
+function renderizarItensXmlMovimentacao() {
+    elementos.movimentoItemXml.innerHTML = itensXmlMovimentacao.map((item, indice) => {
+        const registrado = itensXmlRegistrados.has(indice);
+        const status = registrado ? " ✓ Registrado" : "";
+        return `<option value="${indice}"${registrado ? " disabled" : ""}>${indice + 1}. ${escaparHTML(item.nome || item.codigo)} · ${formatarNumero(item.quantidade)} unidade(s)${status}</option>`;
+    }).join("");
 }
 
 function preencherItemXmlMovimentacao(indice) {
@@ -1075,12 +1096,13 @@ function preencherItemXmlMovimentacao(indice) {
     const produto = encontrarProdutoDoXml(item);
     produtoSelecionadoMovimentacao = produto?.id || "";
     elementos.movimentoProduto.value = produtoSelecionadoMovimentacao;
+    atualizarSelecaoProdutoXml();
     elementos.movimentoQuantidade.value = Number.isInteger(item.quantidade) && item.quantidade > 0 ? String(item.quantidade) : "";
     elementos.movimentoObservacao.value = item.observacao;
     atualizarInformacaoProdutoMovimento();
 
     elementos.mensagemXml.textContent = produto
-        ? `Item ${Number(indice) + 1} preenchido com o produto cadastrado “${produto.nome}”.`
+        ? `Item ${Number(indice) + 1} preenchido com o produto cadastrado “${produto.nome}”. A seleção foi bloqueada para evitar lançamentos no produto incorreto.`
         : `Item ${Number(indice) + 1} carregado. Selecione manualmente o produto correspondente, pois ele não foi encontrado no cadastro.`;
     atualizarBotaoCadastrarProdutoXml();
 }
@@ -1088,12 +1110,14 @@ function preencherItemXmlMovimentacao(indice) {
 function limparImportacaoXml(limparCampos = true) {
     itensXmlMovimentacao = [];
     indiceItemXmlSelecionado = null;
+    itensXmlRegistrados.clear();
     elementos.movimentoXml.value = "";
     elementos.movimentoItemXml.innerHTML = "";
     elementos.campoItemXml.hidden = true;
     elementos.mensagemXml.textContent = "";
     elementos.botaoRemoverXml.hidden = true;
     elementos.botaoCadastrarProdutoXml.hidden = true;
+    atualizarSelecaoProdutoXml();
 
     if (limparCampos) {
         produtoSelecionadoMovimentacao = "";
@@ -1169,9 +1193,7 @@ async function importarXmlMovimentacao() {
 
     try {
         itensXmlMovimentacao = carregarItensDoXml(await arquivo.text());
-        elementos.movimentoItemXml.innerHTML = itensXmlMovimentacao.map((item, indice) => `
-            <option value="${indice}">${indice + 1}. ${escaparHTML(item.nome || item.codigo)} · ${formatarNumero(item.quantidade)} unidade(s)</option>
-        `).join("");
+        renderizarItensXmlMovimentacao();
         elementos.campoItemXml.hidden = false;
         elementos.botaoRemoverXml.hidden = false;
         preencherItemXmlMovimentacao(0);
@@ -1179,6 +1201,30 @@ async function importarXmlMovimentacao() {
         console.error(erro);
         elementos.mensagemXml.textContent = erro.message || "Não foi possível ler o XML.";
     }
+}
+
+function avancarItemXmlAposEntrada() {
+    if (tipoMovimentacaoAtual !== "entrada" || !Number.isInteger(indiceItemXmlSelecionado) || !itensXmlMovimentacao[indiceItemXmlSelecionado]) return false;
+
+    itensXmlRegistrados.add(indiceItemXmlSelecionado);
+    renderizarItensXmlMovimentacao();
+    const proximoIndice = itensXmlMovimentacao.findIndex((_item, indice) => !itensXmlRegistrados.has(indice));
+
+    if (proximoIndice >= 0) {
+        elementos.movimentoItemXml.value = String(proximoIndice);
+        preencherItemXmlMovimentacao(proximoIndice);
+        elementos.mensagemXml.textContent = `Entrada registrada. Continue pelo item ${proximoIndice + 1} de ${itensXmlMovimentacao.length}. ${elementos.mensagemXml.textContent}`;
+        return true;
+    }
+
+    produtoSelecionadoMovimentacao = "";
+    elementos.movimentoProduto.value = "";
+    elementos.movimentoQuantidade.value = "";
+    elementos.movimentoObservacao.value = "";
+    atualizarInformacaoProdutoMovimento();
+    atualizarBotaoCadastrarProdutoXml();
+    elementos.mensagemXml.textContent = `Todos os ${itensXmlMovimentacao.length} itens do XML foram registrados.`;
+    return true;
 }
 
 function navegar(pagina, opcoes = {}) {
@@ -2908,10 +2954,12 @@ elementos.formularioMovimentacao.addEventListener("submit", (evento) => {
     });
 
     salvarEstado();
-    elementos.movimentoQuantidade.value = "";
     elementos.movimentoFilial.value = "";
-    elementos.movimentoObservacao.value = "";
-    limparImportacaoXml(false);
+    if (!avancarItemXmlAposEntrada()) {
+        elementos.movimentoQuantidade.value = "";
+        elementos.movimentoObservacao.value = "";
+        limparImportacaoXml(false);
+    }
     renderizarTudo();
     notificar(tipoMovimentacaoAtual === "entrada" ? "Entrada registrada." : "Saída registrada.");
 });
