@@ -1392,6 +1392,7 @@ function renderizarProdutos() {
                     <button type="button" class="botao-acao acao-saida" data-acao="movimentar" data-produto-id="${produto.id}" data-tipo="saida">Saída</button>
                     <button type="button" class="botao-acao" data-acao="editar-produto" data-produto-id="${produto.id}">Editar</button>
                     <button type="button" class="botao-acao acao-perigo" data-acao="arquivar-produto" data-produto-id="${produto.id}">Arquivar</button>
+                    <button type="button" class="botao-acao acao-perigo" data-acao="excluir-produto" data-produto-id="${produto.id}">Excluir</button>
                 `
                 : `<button type="button" class="botao-acao acao-restaurar" data-acao="restaurar-produto" data-produto-id="${produto.id}">Restaurar</button>`;
 
@@ -2016,6 +2017,45 @@ function arquivarProduto(produtoId) {
     salvarEstado();
     renderizarTudo();
     notificar("Produto arquivado. O histórico foi preservado.");
+}
+
+async function excluirProduto(produtoId) {
+    if (!usuarioEhCD()) {
+        notificar("Apenas administradores do CD podem excluir produtos.", "erro");
+        return;
+    }
+
+    const produto = buscarProduto(produtoId);
+    if (!produto) return;
+
+    const possuiMovimentacoes = estado.movimentacoes.some((movimentacao) => movimentacao.produtoId === produto.id);
+    const possuiPedidos = estado.pedidos.some((pedido) => itensDoPedido(pedido).some((item) => item.produtoId === produto.id));
+    const possuiEstoqueEmFilial = Object.keys(estado.estoqueFiliais).some((chave) => chave.endsWith(`:${produto.id}`));
+
+    if (possuiMovimentacoes || possuiPedidos || possuiEstoqueEmFilial) {
+        notificar("Este produto possui histórico ou vínculo com filial. Para preservá-los, use Arquivar em vez de Excluir.", "erro");
+        return;
+    }
+
+    const confirmou = window.confirm(`Excluir permanentemente o produto “${produto.nome}”? Esta ação não pode ser desfeita.`);
+    if (!confirmou) return;
+
+    if (!clienteSupabase) {
+        notificar("Não foi possível conectar ao banco para excluir o produto.", "erro");
+        return;
+    }
+
+    const { error } = await clienteSupabase.from("produtos").delete().eq("id", produto.id);
+    if (error) {
+        console.error(error);
+        notificar("Não foi possível excluir o produto. Atualize a página e tente novamente.", "erro");
+        return;
+    }
+
+    estado.produtos = estado.produtos.filter((item) => item.id !== produto.id);
+    salvarEstado();
+    renderizarTudo();
+    notificar("Produto excluído permanentemente.");
 }
 
 function restaurarProduto(produtoId) {
@@ -2680,6 +2720,9 @@ function lidarComAcao(acao, elemento) {
             break;
         case "arquivar-produto":
             arquivarProduto(elemento.dataset.produtoId);
+            break;
+        case "excluir-produto":
+            excluirProduto(elemento.dataset.produtoId);
             break;
         case "restaurar-produto":
             restaurarProduto(elemento.dataset.produtoId);
