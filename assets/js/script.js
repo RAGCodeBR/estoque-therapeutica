@@ -24,7 +24,8 @@ const FILIAIS_PADRAO = [
     { id: "matriz", nome: "Sorriso - Indústria", cidade: "Sorriso, MT" },
     { id: "sorriso-laboratorio", nome: "Sorriso - Laboratório", cidade: "Sorriso, MT" },
     { id: "sorriso-callcenter", nome: "Sorriso - Callcenter", cidade: "Sorriso, MT" },
-    { id: "sorriso-atendimento", nome: "Sorriso - Atendimento", cidade: "Sorriso, MT" }
+    { id: "sorriso-atendimento", nome: "Sorriso - Atendimento", cidade: "Sorriso, MT" },
+    { id: "sorriso-rh", nome: "Sorriso - RH", cidade: "Sorriso, MT" }
 ];
 const CATEGORIAS_ESTOQUE = [
     "Administrativo",

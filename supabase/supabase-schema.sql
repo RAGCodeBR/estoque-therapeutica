@@ -91,7 +91,8 @@ insert into public.filiais (id, nome, cidade) values
   ('sinop', 'Sinop', 'Sinop, MT'),
   ('sorriso-laboratorio', 'Sorriso - Laboratório', 'Sorriso, MT'),
   ('sorriso-callcenter', 'Sorriso - Callcenter', 'Sorriso, MT'),
-  ('sorriso-atendimento', 'Sorriso - Atendimento', 'Sorriso, MT')
+  ('sorriso-atendimento', 'Sorriso - Atendimento', 'Sorriso, MT'),
+  ('sorriso-rh', 'Sorriso - RH', 'Sorriso, MT')
 on conflict (id) do update set nome = excluded.nome, cidade = excluded.cidade;
 
 -- O app envia um retrato completo do estado. Isto permite a migração sem
