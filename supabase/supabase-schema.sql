@@ -57,6 +57,27 @@ alter table public.produtos add constraint produtos_categoria_fkey
   foreign key (categoria) references public.categorias_produtos(nome)
   on update cascade on delete restrict;
 
+create table if not exists public.unidades_medida (
+  nome text primary key check (nome = btrim(nome) and nome <> ''),
+  criado_em timestamptz not null default now()
+);
+
+create unique index if not exists unidades_medida_nome_sem_diferenca_de_maiusculas_idx
+  on public.unidades_medida (lower(nome));
+
+insert into public.unidades_medida (nome) values
+  ('Unidade'), ('Caixa'), ('Pacote'), ('Litro'), ('Quilograma')
+on conflict (nome) do nothing;
+
+insert into public.unidades_medida (nome)
+select distinct btrim(unidade) from public.produtos where btrim(unidade) <> ''
+on conflict (nome) do nothing;
+
+alter table public.produtos drop constraint if exists produtos_unidade_fkey;
+alter table public.produtos add constraint produtos_unidade_fkey
+  foreign key (unidade) references public.unidades_medida(nome)
+  on update cascade on delete restrict;
+
 create table if not exists public.pedidos (
   id text primary key,
   filial_id text not null references public.filiais(id),

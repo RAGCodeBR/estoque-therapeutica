@@ -501,6 +501,24 @@
                                 </table>
                             </div>
                         </article>
+                        <article class="cartao-configuracao cartao-categorias">
+                            <h3>Unidades de medida</h3>
+                            <p>Cadastre, edite ou exclua unidades disponíveis no cadastro de produtos.</p>
+                            <form id="formulario-unidade" class="formulario-categoria">
+                                <label for="unidade-nome">Nova unidade</label>
+                                <div class="linha-formulario-categoria">
+                                    <input type="text" id="unidade-nome" maxlength="80" placeholder="Exemplo: Metro" required>
+                                    <button type="submit" class="botao-principal">Adicionar</button>
+                                </div>
+                                <p class="mensagem-formulario" id="mensagem-unidade" aria-live="polite"></p>
+                            </form>
+                            <div class="tabela-responsiva tabela-categorias">
+                                <table>
+                                    <thead><tr><th>Unidade</th><th>Produtos</th><th>Ações</th></tr></thead>
+                                    <tbody id="tabela-unidades"></tbody>
+                                </table>
+                            </div>
+                        </article>
                     </section>
                 </section>
             </main>
@@ -544,11 +562,6 @@
                 <label for="produto-unidade">Unidade de medida</label>
                 <select id="produto-unidade" required>
                     <option value="">Selecione uma unidade</option>
-                    <option value="Unidade">Unidade</option>
-                    <option value="Caixa">Caixa</option>
-                    <option value="Pacote">Pacote</option>
-                    <option value="Litro">Litro</option>
-                    <option value="Quilograma">Quilograma</option>
                 </select>
 
                 <p class="mensagem-formulario" id="mensagem-produto" aria-live="polite"></p>

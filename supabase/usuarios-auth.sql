@@ -52,7 +52,7 @@ for select to authenticated using (id = auth.uid());
 -- Substitui a política de demonstração, que deixava o banco aberto ao público.
 do $$ declare t text;
 begin
-  foreach t in array array['filiais', 'produtos', 'categorias_produtos', 'pedidos', 'pedido_itens', 'estoque_filiais', 'movimentacoes'] loop
+  foreach t in array array['filiais', 'produtos', 'categorias_produtos', 'unidades_medida', 'pedidos', 'pedido_itens', 'estoque_filiais', 'movimentacoes'] loop
     execute format('drop policy if exists acesso_temporario on public.%I', t);
     execute format('revoke all on public.%I from anon', t);
   end loop;
@@ -68,6 +68,9 @@ create policy "cd administra produtos" on public.produtos for all to authenticat
 alter table public.categorias_produtos enable row level security;
 create policy "usuarios autenticados leem categorias" on public.categorias_produtos for select to authenticated using (true);
 create policy "cd administra categorias" on public.categorias_produtos for all to authenticated using (public.meu_papel() = 'cd_admin') with check (public.meu_papel() = 'cd_admin');
+alter table public.unidades_medida enable row level security;
+create policy "usuarios autenticados leem unidades" on public.unidades_medida for select to authenticated using (true);
+create policy "cd administra unidades" on public.unidades_medida for all to authenticated using (public.meu_papel() = 'cd_admin') with check (public.meu_papel() = 'cd_admin');
 create policy "cd le movimentacoes" on public.movimentacoes for select to authenticated using (public.meu_papel() = 'cd_admin');
 create policy "cd administra movimentacoes" on public.movimentacoes for all to authenticated using (public.meu_papel() = 'cd_admin') with check (public.meu_papel() = 'cd_admin');
 create policy "cd le estoque das filiais" on public.estoque_filiais for select to authenticated using (public.meu_papel() = 'cd_admin');

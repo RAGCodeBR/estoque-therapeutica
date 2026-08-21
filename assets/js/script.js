@@ -37,7 +37,9 @@ const CATEGORIAS_INICIAIS = [
     "Medicamentos",
     "Outros"
 ];
+const UNIDADES_INICIAIS = ["Unidade", "Caixa", "Pacote", "Litro", "Quilograma"];
 let categoriasProdutos = [...CATEGORIAS_INICIAIS];
+let unidadesMedida = [...UNIDADES_INICIAIS];
 const titulosPaginas = {
     dashboard: "Dashboard",
     produtos: "Produtos",
@@ -157,6 +159,10 @@ const elementos = {
     categoriaNome: document.querySelector("#categoria-nome"),
     mensagemCategoria: document.querySelector("#mensagem-categoria"),
     tabelaCategorias: document.querySelector("#tabela-categorias"),
+    formularioUnidade: document.querySelector("#formulario-unidade"),
+    unidadeNome: document.querySelector("#unidade-nome"),
+    mensagemUnidade: document.querySelector("#mensagem-unidade"),
+    tabelaUnidades: document.querySelector("#tabela-unidades"),
     tituloPortalFilial: document.querySelector("#titulo-portal-filial"),
     indicadorFilialPedidos: document.querySelector("#indicador-filial-pedidos"),
     formularioItemPedido: document.querySelector("#formulario-item-pedido"),
@@ -785,15 +791,16 @@ async function carregarDadosSupabase() {
         notificar("Não foi possível carregar o Supabase. Verifique sua conexão e atualize a página.", "erro");
         return;
     }
-    const [produtos, filiais, pedidos, estoques, movimentacoes, categorias] = await Promise.all([
+    const [produtos, filiais, pedidos, estoques, movimentacoes, categorias, unidades] = await Promise.all([
         clienteSupabase.from("produtos").select("*").order("nome"),
         clienteSupabase.from("filiais").select("*").order("nome"),
         clienteSupabase.from("pedidos").select("*, itens:pedido_itens(*)").order("criado_em", { ascending: false }),
         clienteSupabase.from("estoque_filiais").select("*"),
         clienteSupabase.from("movimentacoes").select("*").order("criado_em", { ascending: false }),
-        clienteSupabase.from("categorias_produtos").select("nome").order("nome")
+        clienteSupabase.from("categorias_produtos").select("nome").order("nome"),
+        clienteSupabase.from("unidades_medida").select("nome").order("nome")
     ]);
-    const erro = [produtos, filiais, pedidos, estoques, movimentacoes, categorias].find((resultado) => resultado.error)?.error;
+    const erro = [produtos, filiais, pedidos, estoques, movimentacoes, categorias, unidades].find((resultado) => resultado.error)?.error;
     if (erro) {
         console.error(erro);
         notificar("Erro ao carregar os dados do Supabase. Execute o arquivo supabase-schema.sql no SQL Editor.", "erro");
@@ -801,6 +808,7 @@ async function carregarDadosSupabase() {
     }
 
     categoriasProdutos = categorias.data.map((categoria) => categoria.nome);
+    unidadesMedida = unidades.data.map((unidade) => unidade.nome);
 
     const bancoEstaVazio = produtos.data.length === 0
         && pedidos.data.length === 0
@@ -1640,6 +1648,88 @@ async function excluirCategoria(nome) {
     notificar("Categoria excluída.");
 }
 
+function unidadesDisponiveis() {
+    return [...unidadesMedida].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function renderizarOpcoesUnidadeProduto(valorSelecionado = elementos.produtoUnidade.value) {
+    const unidades = unidadesDisponiveis();
+    elementos.produtoUnidade.innerHTML = `
+        <option value="">Selecione uma unidade</option>
+        ${unidades.map((unidade) => `<option value="${escaparHTML(unidade)}">${escaparHTML(unidade)}</option>`).join("")}
+    `;
+    if (unidades.includes(valorSelecionado)) elementos.produtoUnidade.value = valorSelecionado;
+}
+
+function renderizarUnidadesConfiguracoes() {
+    if (!elementos.tabelaUnidades) return;
+    const unidades = unidadesDisponiveis();
+    elementos.tabelaUnidades.innerHTML = unidades.map((unidade) => {
+        const quantidadeProdutos = estado.produtos.filter((produto) => produto.unidade === unidade).length;
+        return `<tr>
+            <td><strong>${escaparHTML(unidade)}</strong></td>
+            <td>${quantidadeProdutos}</td>
+            <td><div class="acoes-tabela">
+                <button type="button" class="botao-acao" data-acao="editar-unidade" data-unidade="${escaparHTML(unidade)}">Editar</button>
+                <button type="button" class="botao-acao acao-perigo" data-acao="excluir-unidade" data-unidade="${escaparHTML(unidade)}">Excluir</button>
+            </div></td>
+        </tr>`;
+    }).join("") || '<tr><td colspan="3" class="tabela-vazia">Nenhuma unidade cadastrada.</td></tr>';
+}
+
+async function criarUnidade(nome) {
+    const unidade = nome.trim();
+    if (!unidade) { elementos.mensagemUnidade.textContent = "Informe o nome da unidade."; return; }
+    if (unidadesDisponiveis().some((item) => item.localeCompare(unidade, "pt-BR", { sensitivity: "accent" }) === 0)) {
+        elementos.mensagemUnidade.textContent = "Já existe uma unidade com esse nome.";
+        return;
+    }
+    const { error } = await clienteSupabase.from("unidades_medida").insert({ nome: unidade });
+    if (error) {
+        console.error(error);
+        elementos.mensagemUnidade.textContent = error.code === "23505" ? "Já existe uma unidade com esse nome." : "Não foi possível criar a unidade.";
+        return;
+    }
+    elementos.formularioUnidade.reset();
+    elementos.mensagemUnidade.textContent = "";
+    await carregarDadosSupabase();
+    notificar("Unidade criada.");
+}
+
+async function editarUnidade(nomeAtual) {
+    const resposta = window.prompt(`Novo nome para a unidade "${nomeAtual}":`, nomeAtual);
+    if (resposta === null) return;
+    const novoNome = resposta.trim();
+    if (!novoNome) { notificar("Informe um nome válido para a unidade.", "erro"); return; }
+    if (novoNome === nomeAtual) return;
+    if (unidadesDisponiveis().some((unidade) => unidade !== nomeAtual && unidade.localeCompare(novoNome, "pt-BR", { sensitivity: "accent" }) === 0)) {
+        notificar("Já existe uma unidade com esse nome.", "erro");
+        return;
+    }
+    const quantidadeProdutos = estado.produtos.filter((produto) => produto.unidade === nomeAtual).length;
+    const confirmou = window.confirm(quantidadeProdutos
+        ? `Renomear "${nomeAtual}" para "${novoNome}"? Os ${quantidadeProdutos} produto(s) dessa unidade serão atualizados.`
+        : `Renomear "${nomeAtual}" para "${novoNome}"?`);
+    if (!confirmou) return;
+    const { error } = await clienteSupabase.from("unidades_medida").update({ nome: novoNome }).eq("nome", nomeAtual);
+    if (error) { console.error(error); notificar("Não foi possível editar a unidade.", "erro"); return; }
+    await carregarDadosSupabase();
+    notificar("Unidade atualizada.");
+}
+
+async function excluirUnidade(nome) {
+    const quantidadeProdutos = estado.produtos.filter((produto) => produto.unidade === nome).length;
+    if (quantidadeProdutos) {
+        notificar(`A unidade "${nome}" possui ${quantidadeProdutos} produto(s). Altere-os antes de excluí-la.`, "erro");
+        return;
+    }
+    if (!window.confirm(`Excluir a unidade "${nome}"? Esta ação não pode ser desfeita.`)) return;
+    const { error } = await clienteSupabase.from("unidades_medida").delete().eq("nome", nome);
+    if (error) { console.error(error); notificar("Não foi possível excluir a unidade.", "erro"); return; }
+    await carregarDadosSupabase();
+    notificar("Unidade excluída.");
+}
+
 function loginParaExibicao(email) {
     const sufixoInterno = "@usuarios.therapeutica.local";
     return String(email || "").endsWith(sufixoInterno)
@@ -1810,6 +1900,8 @@ function renderizarTudo() {
     renderizarFiltroCategorias();
     renderizarOpcoesCategoriaProduto();
     renderizarCategoriasConfiguracoes();
+    renderizarOpcoesUnidadeProduto();
+    renderizarUnidadesConfiguracoes();
     renderizarProdutos();
     renderizarFormularioMovimentacao();
     renderizarEstoqueBaixo();
@@ -1922,6 +2014,7 @@ function abrirModalProduto(produtoId = "") {
 
     const produto = produtoId ? buscarProduto(produtoId) : null;
     renderizarOpcoesCategoriaProduto(produto?.categoria || "Outros");
+    renderizarOpcoesUnidadeProduto(produto?.unidade || "Unidade");
 
     if (produto) {
         elementos.tituloModalProduto.textContent = "Editar produto";
@@ -2809,6 +2902,12 @@ function lidarComAcao(acao, elemento) {
         case "excluir-categoria":
             excluirCategoria(elemento.dataset.categoria);
             break;
+        case "editar-unidade":
+            editarUnidade(elemento.dataset.unidade);
+            break;
+        case "excluir-unidade":
+            excluirUnidade(elemento.dataset.unidade);
+            break;
         case "editar-usuario":
             abrirModalUsuario(elemento.dataset.usuarioId);
             break;
@@ -3414,6 +3513,10 @@ elementos.arquivoImportar.addEventListener("change", importarBackup);
 elementos.formularioCategoria?.addEventListener("submit", async (evento) => {
     evento.preventDefault();
     await criarCategoria(elementos.categoriaNome.value);
+});
+elementos.formularioUnidade?.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    await criarUnidade(elementos.unidadeNome.value);
 });
 elementos.botaoDadosDemo?.addEventListener("click", carregarDadosDemo);
 
