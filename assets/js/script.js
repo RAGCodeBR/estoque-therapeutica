@@ -52,13 +52,16 @@ const titulosPaginas = {
     filiais: "Filiais",
     historico: "Histórico",
     usuarios: "Usuários",
-    configuracoes: "Configurações"
+    "configuracoes-cadastros": "Cadastros do estoque",
+    "configuracoes-backup": "Dados e backup"
 };
 const elementos = {
     navegacao: [...document.querySelectorAll(".item-menu")],
     paginas: [...document.querySelectorAll(".pagina")],
     menuMatriz: document.querySelector("#menu-matriz"),
     menuFilial: document.querySelector("#menu-filial"),
+    botaoConfiguracoes: document.querySelector("#botao-configuracoes"),
+    submenuConfiguracoes: document.querySelector("#submenu-configuracoes"),
     seletorPortal: document.querySelector("#seletor-portal"),
     contextoPortal: document.querySelector("#contexto-portal"),
     tituloPagina: document.querySelector("#titulo-pagina"),
@@ -1282,6 +1285,10 @@ function navegar(pagina, opcoes = {}) {
 
     elementos.menuMatriz.hidden = estaNoPortalFilial();
     elementos.menuFilial.hidden = !estaNoPortalFilial();
+    if (!paginaAtual.startsWith("configuracoes-")) {
+        elementos.submenuConfiguracoes.hidden = true;
+        elementos.botaoConfiguracoes.setAttribute("aria-expanded", "false");
+    }
     const filial = filialAtual();
     elementos.contextoPortal.textContent = filial
         ? `Therapeutica Pharmacia · Filial ${filial.nome}`
@@ -2994,8 +3001,15 @@ function lidarComAcao(acao, elemento) {
 
 elementos.navegacao.forEach((item) => {
     item.addEventListener("click", () => {
+        if (item === elementos.botaoConfiguracoes) return;
         navegar(item.dataset.pagina, { tipoMovimentacao: item.dataset.tipoMovimentacao });
     });
+});
+
+elementos.botaoConfiguracoes.addEventListener("click", () => {
+    const aberto = !elementos.submenuConfiguracoes.hidden;
+    elementos.submenuConfiguracoes.hidden = aberto;
+    elementos.botaoConfiguracoes.setAttribute("aria-expanded", String(!aberto));
 });
 
 document.addEventListener("click", (evento) => {

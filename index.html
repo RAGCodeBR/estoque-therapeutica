@@ -26,7 +26,11 @@
                     <button class="item-menu" data-pagina="filiais"><span class="icone icone-filiais" aria-hidden="true"></span><span>Filiais</span></button>
                     <button class="item-menu" data-pagina="historico"><span class="icone icone-historico" aria-hidden="true"></span><span>Histórico</span></button>
                     <button class="item-menu" data-pagina="usuarios"><span class="icone icone-usuarios" aria-hidden="true"></span><span>Usuários</span></button>
-                    <button class="item-menu" data-pagina="configuracoes"><span class="icone icone-config" aria-hidden="true"></span><span>Configurações</span></button>
+                    <button class="item-menu" type="button" id="botao-configuracoes" aria-expanded="false"><span class="icone icone-config" aria-hidden="true"></span><span>Configurações</span></button>
+                    <div class="submenu-configuracoes" id="submenu-configuracoes" hidden>
+                        <button class="item-menu item-submenu" type="button" data-pagina="configuracoes-cadastros"><span>Cadastros do estoque</span></button>
+                        <button class="item-menu item-submenu" type="button" data-pagina="configuracoes-backup"><span>Dados e backup</span></button>
+                    </div>
                 </div>
 
                 <div class="grupo-menu" id="menu-filial" hidden>
@@ -463,26 +467,15 @@
                     </section>
                 </section>
 
-                <section class="pagina" id="pagina-configuracoes">
+                <section class="pagina" id="pagina-configuracoes-cadastros">
                     <div class="cabecalho-secao">
                         <div>
-                            <p class="subtitulo-secao">Administração do sistema</p>
-                            <h2>Configurações</h2>
-                            <p>Gerencie as categorias de produtos e os backups locais.</p>
+                            <p class="subtitulo-secao">Configurações</p>
+                            <h2>Cadastros do estoque</h2>
+                            <p>Gerencie as categorias e unidades de medida disponíveis nos produtos.</p>
                         </div>
                     </div>
                     <section class="grade-configuracoes">
-                        <article class="cartao-configuracao">
-                            <h3>Exportar backup</h3>
-                            <p>Baixe produtos, pedidos e histórico em um arquivo JSON.</p>
-                            <button type="button" class="botao-principal" id="botao-exportar">Baixar backup</button>
-                        </article>
-                        <article class="cartao-configuracao">
-                            <h3>Importar backup</h3>
-                            <p>Restaure dados previamente exportados neste mesmo sistema.</p>
-                            <label class="botao-secundario" for="arquivo-importar">Escolher arquivo</label>
-                            <input type="file" id="arquivo-importar" accept="application/json" hidden>
-                        </article>
                         <article class="cartao-configuracao cartao-categorias">
                             <h3>Categorias de produtos</h3>
                             <p>Cadastre, edite ou exclua categorias disponíveis no cadastro de produtos.</p>
@@ -518,6 +511,29 @@
                                     <tbody id="tabela-unidades"></tbody>
                                 </table>
                             </div>
+                        </article>
+                    </section>
+                </section>
+
+                <section class="pagina" id="pagina-configuracoes-backup">
+                    <div class="cabecalho-secao">
+                        <div>
+                            <p class="subtitulo-secao">Configurações</p>
+                            <h2>Dados e backup</h2>
+                            <p>Exporte uma cópia dos dados ou restaure um backup criado neste sistema.</p>
+                        </div>
+                    </div>
+                    <section class="grade-configuracoes grade-backups-configuracoes">
+                        <article class="cartao-configuracao">
+                            <h3>Exportar backup</h3>
+                            <p>Baixe produtos, pedidos e histórico em um arquivo JSON.</p>
+                            <button type="button" class="botao-principal" id="botao-exportar">Baixar backup</button>
+                        </article>
+                        <article class="cartao-configuracao">
+                            <h3>Importar backup</h3>
+                            <p>Restaure dados previamente exportados neste mesmo sistema.</p>
+                            <label class="botao-secundario" for="arquivo-importar">Escolher arquivo</label>
+                            <input type="file" id="arquivo-importar" accept="application/json" hidden>
                         </article>
                     </section>
                 </section>

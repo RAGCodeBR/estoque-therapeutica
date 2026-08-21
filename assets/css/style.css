@@ -942,6 +942,38 @@ tbody tr:last-child td {
     gap: 18px;
 }
 
+.submenu-configuracoes {
+    display: grid;
+    gap: 4px;
+    margin: -4px 0 4px;
+    padding-left: 22px;
+}
+
+.submenu-configuracoes[hidden] {
+    display: none;
+}
+
+.item-menu.item-submenu {
+    min-height: 34px;
+    padding: 8px 12px;
+    color: var(--marrom-claro);
+    font-size: 12px;
+}
+
+.item-menu.item-submenu::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    margin-right: 9px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.grade-backups-configuracoes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 820px;
+}
+
 .cartao-categorias {
     grid-column: 1 / -1;
     width: min(100%, 820px);
