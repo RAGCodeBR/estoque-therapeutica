@@ -18,10 +18,13 @@ function conectarSupabase() {
     return Boolean(clienteSupabase);
 }
 const FILIAIS_PADRAO = [
-    { id: "matriz", nome: "Sorriso", cidade: "Sorriso, MT" },
     { id: "blumenau", nome: "Blumenau", cidade: "Blumenau, SC" },
     { id: "lucas", nome: "Lucas", cidade: "Lucas do Rio Verde, MT" },
-    { id: "sinop", nome: "Sinop", cidade: "Sinop, MT" }
+    { id: "sinop", nome: "Sinop", cidade: "Sinop, MT" },
+    { id: "matriz", nome: "Sorriso - Indústria", cidade: "Sorriso, MT" },
+    { id: "sorriso-laboratorio", nome: "Sorriso - Laboratório", cidade: "Sorriso, MT" },
+    { id: "sorriso-callcenter", nome: "Sorriso - Callcenter", cidade: "Sorriso, MT" },
+    { id: "sorriso-atendimento", nome: "Sorriso - Atendimento", cidade: "Sorriso, MT" }
 ];
 const CATEGORIAS_ESTOQUE = [
     "Administrativo",
@@ -547,9 +550,18 @@ function normalizarPedido(pedido) {
 function normalizarFilial(filial) {
     const dados = filial && typeof filial === "object" ? filial : {};
     if (dados.id === "matriz") {
-        return { ...dados, nome: "Sorriso", cidade: "Sorriso, MT" };
+        return { ...dados, nome: "Sorriso - Indústria", cidade: "Sorriso, MT" };
     }
     return dados;
+}
+
+function ordenarFiliais(filiais) {
+    const ordemPorId = new Map(FILIAIS_PADRAO.map((filial, indice) => [filial.id, indice]));
+    return [...filiais].sort((a, b) => {
+        const ordemA = ordemPorId.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+        const ordemB = ordemPorId.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+        return ordemA - ordemB || a.nome.localeCompare(b.nome, "pt-BR");
+    });
 }
 
 function normalizarEstado(dados) {
@@ -801,7 +813,7 @@ async function carregarDadosSupabase() {
     estado = {
         ...estadoPadrao(),
         produtos: [...produtosPorId.values()],
-        filiais: filiais.data.map((filial) => normalizarFilial({ id: filial.id, nome: filial.nome, cidade: filial.cidade })),
+        filiais: ordenarFiliais(filiais.data.map((filial) => normalizarFilial({ id: filial.id, nome: filial.nome, cidade: filial.cidade }))),
         pedidos: pedidos.data.map((pedido) => ({
             id: pedido.id, filialId: pedido.filial_id,
             itens: pedido.itens.map((item) => {
