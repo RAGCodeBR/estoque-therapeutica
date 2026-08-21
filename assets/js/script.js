@@ -152,7 +152,6 @@ const elementos = {
     botaoExportar: document.querySelector("#botao-exportar"),
     arquivoImportar: document.querySelector("#arquivo-importar"),
     botaoDadosDemo: document.querySelector("#botao-dados-demo"),
-    botaoLimparDados: document.querySelector("#botao-limpar-dados"),
     tituloPortalFilial: document.querySelector("#titulo-portal-filial"),
     indicadorFilialPedidos: document.querySelector("#indicador-filial-pedidos"),
     formularioItemPedido: document.querySelector("#formulario-item-pedido"),
@@ -2670,20 +2669,6 @@ async function importarBackup(evento) {
     }
 }
 
-function limparDados() {
-    const confirmou = window.confirm("Limpar todos os produtos, pedidos e histórico deste protótipo? Esta ação não pode ser desfeita sem um backup.");
-
-    if (!confirmou) return;
-
-    localStorage.removeItem(STORAGE_KEY);
-    carregarDadosSupabase();
-    produtoSelecionadoMovimentacao = "";
-
-    renderizarTudo();
-    navegar("dashboard");
-    notificar("Dados locais removidos.");
-}
-
 function carregarDadosDemo() {
     const confirmou = window.confirm("Carregar dados de demonstração? Isso substituirá produtos, pedidos e histórico salvos neste navegador.");
 
@@ -3325,7 +3310,6 @@ elementos.formularioUsuario.addEventListener("submit", async (evento) => {
 elementos.botaoExportar.addEventListener("click", exportarBackup);
 elementos.arquivoImportar.addEventListener("change", importarBackup);
 elementos.botaoDadosDemo?.addEventListener("click", carregarDadosDemo);
-elementos.botaoLimparDados.addEventListener("click", limparDados);
 
 elementos.seletorPortal.value = portalAtual;
 navegar("dashboard");
