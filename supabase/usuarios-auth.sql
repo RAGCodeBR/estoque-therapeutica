@@ -58,6 +58,9 @@ begin
   end loop;
 end $$;
 
+-- Remove a política usada apenas durante a fase sem controle de acesso.
+drop policy if exists "Alteração pública temporária" on public.produtos;
+
 create policy "usuarios autenticados leem filiais" on public.filiais for select to authenticated using (true);
 create policy "cd administra filiais" on public.filiais for all to authenticated using (public.meu_papel() = 'cd_admin') with check (public.meu_papel() = 'cd_admin');
 create policy "usuarios autenticados leem produtos" on public.produtos for select to authenticated using (true);
@@ -78,6 +81,18 @@ create policy "cd administra itens" on public.pedido_itens for all to authentica
 
 -- O snapshot antigo não deve ser usado após habilitar RLS.
 revoke execute on function public.substituir_estado_estoque(jsonb) from anon, authenticated;
+revoke execute on function public.criar_perfil_usuario() from public;
+revoke execute on function public.criar_perfil_usuario() from authenticated;
+revoke execute on function public.listar_usuarios() from public;
+revoke execute on function public.meu_papel() from public;
+revoke execute on function public.minha_filial_id() from public;
+revoke execute on function public.confirmar_recebimento_pedido(text) from public;
+revoke execute on function public.confirmar_recebimento_item_pedido(text, text) from public;
+grant execute on function public.listar_usuarios() to authenticated;
+grant execute on function public.meu_papel() to authenticated;
+grant execute on function public.minha_filial_id() to authenticated;
+grant execute on function public.confirmar_recebimento_pedido(text) to authenticated;
+grant execute on function public.confirmar_recebimento_item_pedido(text, text) to authenticated;
 
 alter table public.produtos replica identity full;
 alter table public.pedidos replica identity full;

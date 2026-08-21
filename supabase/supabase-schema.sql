@@ -82,7 +82,10 @@ create table if not exists public.movimentacoes (
 );
 
 create index if not exists movimentacoes_criado_em_idx on public.movimentacoes (criado_em desc);
+create index if not exists movimentacoes_filial_id_idx on public.movimentacoes (filial_id);
+create index if not exists movimentacoes_pedido_id_idx on public.movimentacoes (pedido_id);
 create index if not exists pedidos_filial_id_idx on public.pedidos (filial_id);
+create index if not exists estoque_filiais_produto_id_idx on public.estoque_filiais (produto_id);
 
 insert into public.filiais (id, nome, cidade) values
   ('matriz', 'Sorriso - Indústria', 'Sorriso, MT'),
