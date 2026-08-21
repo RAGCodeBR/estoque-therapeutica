@@ -27,7 +27,7 @@ const FILIAIS_PADRAO = [
     { id: "sorriso-atendimento", nome: "Sorriso - Atendimento", cidade: "Sorriso, MT" },
     { id: "sorriso-rh", nome: "Sorriso - RH", cidade: "Sorriso, MT" }
 ];
-const CATEGORIAS_ESTOQUE = [
+const CATEGORIAS_INICIAIS = [
     "Administrativo",
     "Dermocosméticos",
     "Embalagens",
@@ -37,6 +37,7 @@ const CATEGORIAS_ESTOQUE = [
     "Medicamentos",
     "Outros"
 ];
+let categoriasProdutos = [...CATEGORIAS_INICIAIS];
 const titulosPaginas = {
     dashboard: "Dashboard",
     produtos: "Produtos",
@@ -152,6 +153,10 @@ const elementos = {
     botaoExportar: document.querySelector("#botao-exportar"),
     arquivoImportar: document.querySelector("#arquivo-importar"),
     botaoDadosDemo: document.querySelector("#botao-dados-demo"),
+    formularioCategoria: document.querySelector("#formulario-categoria"),
+    categoriaNome: document.querySelector("#categoria-nome"),
+    mensagemCategoria: document.querySelector("#mensagem-categoria"),
+    tabelaCategorias: document.querySelector("#tabela-categorias"),
     tituloPortalFilial: document.querySelector("#titulo-portal-filial"),
     indicadorFilialPedidos: document.querySelector("#indicador-filial-pedidos"),
     formularioItemPedido: document.querySelector("#formulario-item-pedido"),
@@ -780,19 +785,22 @@ async function carregarDadosSupabase() {
         notificar("Não foi possível carregar o Supabase. Verifique sua conexão e atualize a página.", "erro");
         return;
     }
-    const [produtos, filiais, pedidos, estoques, movimentacoes] = await Promise.all([
+    const [produtos, filiais, pedidos, estoques, movimentacoes, categorias] = await Promise.all([
         clienteSupabase.from("produtos").select("*").order("nome"),
         clienteSupabase.from("filiais").select("*").order("nome"),
         clienteSupabase.from("pedidos").select("*, itens:pedido_itens(*)").order("criado_em", { ascending: false }),
         clienteSupabase.from("estoque_filiais").select("*"),
-        clienteSupabase.from("movimentacoes").select("*").order("criado_em", { ascending: false })
+        clienteSupabase.from("movimentacoes").select("*").order("criado_em", { ascending: false }),
+        clienteSupabase.from("categorias_produtos").select("nome").order("nome")
     ]);
-    const erro = [produtos, filiais, pedidos, estoques, movimentacoes].find((resultado) => resultado.error)?.error;
+    const erro = [produtos, filiais, pedidos, estoques, movimentacoes, categorias].find((resultado) => resultado.error)?.error;
     if (erro) {
         console.error(erro);
         notificar("Erro ao carregar os dados do Supabase. Execute o arquivo supabase-schema.sql no SQL Editor.", "erro");
         return;
     }
+
+    categoriasProdutos = categorias.data.map((categoria) => categoria.nome);
 
     const bancoEstaVazio = produtos.data.length === 0
         && pedidos.data.length === 0
@@ -1363,7 +1371,7 @@ function renderizarDashboard() {
 
 function renderizarFiltroCategorias() {
     const valorAtual = elementos.filtroCategoria.value;
-    const categorias = CATEGORIAS_ESTOQUE;
+    const categorias = categoriasDisponiveis();
 
     elementos.filtroCategoria.innerHTML = `
         <option value="">Todas as categorias</option>
@@ -1547,6 +1555,91 @@ function abrirModalAnalisarPedido(pedidoId) {
     abrirModal(elementos.modalAnalisarPedido);
 }
 
+function categoriasDisponiveis() {
+    return [...categoriasProdutos].sort((a, b) => a.localeCompare(b, "pt-BR"));
+}
+
+function renderizarOpcoesCategoriaProduto(valorSelecionado = elementos.produtoCategoria.value) {
+    const categorias = categoriasDisponiveis();
+    elementos.produtoCategoria.innerHTML = `
+        <option value="">Selecione uma categoria</option>
+        ${categorias.map((categoria) => `<option value="${escaparHTML(categoria)}">${escaparHTML(categoria)}</option>`).join("")}
+    `;
+    if (categorias.includes(valorSelecionado)) elementos.produtoCategoria.value = valorSelecionado;
+}
+
+function renderizarCategoriasConfiguracoes() {
+    if (!elementos.tabelaCategorias) return;
+    const categorias = categoriasDisponiveis();
+    elementos.tabelaCategorias.innerHTML = categorias.map((categoria) => {
+        const quantidadeProdutos = estado.produtos.filter((produto) => produto.categoria === categoria).length;
+        return `<tr>
+            <td><strong>${escaparHTML(categoria)}</strong></td>
+            <td>${quantidadeProdutos}</td>
+            <td><div class="acoes-tabela">
+                <button type="button" class="botao-acao" data-acao="editar-categoria" data-categoria="${escaparHTML(categoria)}">Editar</button>
+                <button type="button" class="botao-acao acao-perigo" data-acao="excluir-categoria" data-categoria="${escaparHTML(categoria)}">Excluir</button>
+            </div></td>
+        </tr>`;
+    }).join("") || '<tr><td colspan="3" class="tabela-vazia">Nenhuma categoria cadastrada.</td></tr>';
+}
+
+async function criarCategoria(nome) {
+    const categoria = nome.trim();
+    if (!categoria) {
+        elementos.mensagemCategoria.textContent = "Informe o nome da categoria.";
+        return;
+    }
+    if (categoriasDisponiveis().some((item) => item.localeCompare(categoria, "pt-BR", { sensitivity: "accent" }) === 0)) {
+        elementos.mensagemCategoria.textContent = "Já existe uma categoria com esse nome.";
+        return;
+    }
+    const { error } = await clienteSupabase.from("categorias_produtos").insert({ nome: categoria });
+    if (error) {
+        console.error(error);
+        elementos.mensagemCategoria.textContent = error.code === "23505" ? "Já existe uma categoria com esse nome." : "Não foi possível criar a categoria.";
+        return;
+    }
+    elementos.formularioCategoria.reset();
+    elementos.mensagemCategoria.textContent = "";
+    await carregarDadosSupabase();
+    notificar("Categoria criada.");
+}
+
+async function editarCategoria(nomeAtual) {
+    const resposta = window.prompt(`Novo nome para a categoria "${nomeAtual}":`, nomeAtual);
+    if (resposta === null) return;
+    const novoNome = resposta.trim();
+    if (!novoNome) { notificar("Informe um nome válido para a categoria.", "erro"); return; }
+    if (novoNome === nomeAtual) return;
+    if (categoriasDisponiveis().some((categoria) => categoria !== nomeAtual && categoria.localeCompare(novoNome, "pt-BR", { sensitivity: "accent" }) === 0)) {
+        notificar("Já existe uma categoria com esse nome.", "erro");
+        return;
+    }
+    const quantidadeProdutos = estado.produtos.filter((produto) => produto.categoria === nomeAtual).length;
+    const confirmou = window.confirm(quantidadeProdutos
+        ? `Renomear "${nomeAtual}" para "${novoNome}"? Os ${quantidadeProdutos} produto(s) dessa categoria serão atualizados.`
+        : `Renomear "${nomeAtual}" para "${novoNome}"?`);
+    if (!confirmou) return;
+    const { error } = await clienteSupabase.from("categorias_produtos").update({ nome: novoNome }).eq("nome", nomeAtual);
+    if (error) { console.error(error); notificar("Não foi possível editar a categoria.", "erro"); return; }
+    await carregarDadosSupabase();
+    notificar("Categoria atualizada.");
+}
+
+async function excluirCategoria(nome) {
+    const quantidadeProdutos = estado.produtos.filter((produto) => produto.categoria === nome).length;
+    if (quantidadeProdutos) {
+        notificar(`A categoria "${nome}" possui ${quantidadeProdutos} produto(s). Reclassifique-os antes de excluí-la.`, "erro");
+        return;
+    }
+    if (!window.confirm(`Excluir a categoria "${nome}"? Esta ação não pode ser desfeita.`)) return;
+    const { error } = await clienteSupabase.from("categorias_produtos").delete().eq("nome", nome);
+    if (error) { console.error(error); notificar("Não foi possível excluir a categoria.", "erro"); return; }
+    await carregarDadosSupabase();
+    notificar("Categoria excluída.");
+}
+
 function loginParaExibicao(email) {
     const sufixoInterno = "@usuarios.therapeutica.local";
     return String(email || "").endsWith(sufixoInterno)
@@ -1715,6 +1808,8 @@ function renderizarTudo() {
     renderizarIndicadores();
     renderizarDashboard();
     renderizarFiltroCategorias();
+    renderizarOpcoesCategoriaProduto();
+    renderizarCategoriasConfiguracoes();
     renderizarProdutos();
     renderizarFormularioMovimentacao();
     renderizarEstoqueBaixo();
@@ -1826,6 +1921,7 @@ function abrirModalProduto(produtoId = "") {
     elementos.tituloModalProduto.textContent = "Cadastrar produto";
 
     const produto = produtoId ? buscarProduto(produtoId) : null;
+    renderizarOpcoesCategoriaProduto(produto?.categoria || "Outros");
 
     if (produto) {
         elementos.tituloModalProduto.textContent = "Editar produto";
@@ -2707,6 +2803,12 @@ function lidarComAcao(acao, elemento) {
         case "editar-produto":
             abrirModalProduto(elemento.dataset.produtoId);
             break;
+        case "editar-categoria":
+            editarCategoria(elemento.dataset.categoria);
+            break;
+        case "excluir-categoria":
+            excluirCategoria(elemento.dataset.categoria);
+            break;
         case "editar-usuario":
             abrirModalUsuario(elemento.dataset.usuarioId);
             break;
@@ -3309,6 +3411,10 @@ elementos.formularioUsuario.addEventListener("submit", async (evento) => {
 });
 elementos.botaoExportar.addEventListener("click", exportarBackup);
 elementos.arquivoImportar.addEventListener("change", importarBackup);
+elementos.formularioCategoria?.addEventListener("submit", async (evento) => {
+    evento.preventDefault();
+    await criarCategoria(elementos.categoriaNome.value);
+});
 elementos.botaoDadosDemo?.addEventListener("click", carregarDadosDemo);
 
 elementos.seletorPortal.value = portalAtual;

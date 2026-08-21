@@ -35,6 +35,28 @@ alter table public.produtos add column if not exists ativo boolean not null defa
 alter table public.produtos add column if not exists criado_em timestamptz not null default now();
 alter table public.produtos add column if not exists atualizado_em timestamptz not null default now();
 
+create table if not exists public.categorias_produtos (
+  nome text primary key check (nome = btrim(nome) and nome <> ''),
+  criado_em timestamptz not null default now()
+);
+
+create unique index if not exists categorias_produtos_nome_sem_diferenca_de_maiusculas_idx
+  on public.categorias_produtos (lower(nome));
+
+insert into public.categorias_produtos (nome) values
+  ('Administrativo'), ('Dermocosméticos'), ('Embalagens'), ('Higiene'),
+  ('Insumos'), ('Limpeza'), ('Medicamentos'), ('Outros')
+on conflict (nome) do nothing;
+
+insert into public.categorias_produtos (nome)
+select distinct btrim(categoria) from public.produtos where btrim(categoria) <> ''
+on conflict (nome) do nothing;
+
+alter table public.produtos drop constraint if exists produtos_categoria_fkey;
+alter table public.produtos add constraint produtos_categoria_fkey
+  foreign key (categoria) references public.categorias_produtos(nome)
+  on update cascade on delete restrict;
+
 create table if not exists public.pedidos (
   id text primary key,
   filial_id text not null references public.filiais(id),

@@ -466,9 +466,9 @@
                 <section class="pagina" id="pagina-configuracoes">
                     <div class="cabecalho-secao">
                         <div>
-                            <p class="subtitulo-secao">Dados do protótipo</p>
+                            <p class="subtitulo-secao">Administração do sistema</p>
                             <h2>Configurações</h2>
-                            <p>Faça uma cópia dos dados ou importe um backup local.</p>
+                            <p>Gerencie as categorias de produtos e os backups locais.</p>
                         </div>
                     </div>
                     <section class="grade-configuracoes">
@@ -482,6 +482,24 @@
                             <p>Restaure dados previamente exportados neste mesmo sistema.</p>
                             <label class="botao-secundario" for="arquivo-importar">Escolher arquivo</label>
                             <input type="file" id="arquivo-importar" accept="application/json" hidden>
+                        </article>
+                        <article class="cartao-configuracao cartao-categorias">
+                            <h3>Categorias de produtos</h3>
+                            <p>Cadastre, edite ou exclua categorias disponíveis no cadastro de produtos.</p>
+                            <form id="formulario-categoria" class="formulario-categoria">
+                                <label for="categoria-nome">Nova categoria</label>
+                                <div class="linha-formulario-categoria">
+                                    <input type="text" id="categoria-nome" maxlength="80" placeholder="Exemplo: Equipamentos" required>
+                                    <button type="submit" class="botao-principal">Adicionar</button>
+                                </div>
+                                <p class="mensagem-formulario" id="mensagem-categoria" aria-live="polite"></p>
+                            </form>
+                            <div class="tabela-responsiva tabela-categorias">
+                                <table>
+                                    <thead><tr><th>Categoria</th><th>Produtos</th><th>Ações</th></tr></thead>
+                                    <tbody id="tabela-categorias"></tbody>
+                                </table>
+                            </div>
                         </article>
                     </section>
                 </section>
@@ -509,14 +527,6 @@
                 <label for="produto-categoria">Categoria</label>
                 <select id="produto-categoria" required>
                     <option value="">Selecione uma categoria</option>
-                    <option value="Administrativo">Administrativo</option>
-                    <option value="Dermocosméticos">Dermocosméticos</option>
-                    <option value="Embalagens">Embalagens</option>
-                    <option value="Higiene">Higiene</option>
-                    <option value="Insumos">Insumos</option>
-                    <option value="Limpeza">Limpeza</option>
-                    <option value="Medicamentos">Medicamentos</option>
-                    <option value="Outros">Outros</option>
                 </select>
 
                 <div class="campos-lado-a-lado">

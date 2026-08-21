@@ -884,6 +884,10 @@ tbody tr:last-child td {
     gap: 8px;
 }
 
+@media (max-width: 560px) {
+    .linha-formulario-categoria { flex-direction: column; }
+}
+
 .formulario-pagina-container {
     max-width: 680px;
     padding: 25px;
@@ -936,6 +940,48 @@ tbody tr:last-child td {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
+}
+
+.cartao-categorias {
+    grid-column: 1 / -1;
+    width: min(100%, 820px);
+    justify-self: start;
+}
+
+.formulario-categoria {
+    margin: 16px 0;
+}
+
+.formulario-categoria label {
+    display: block;
+    margin-bottom: 7px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--marrom-claro);
+}
+
+.linha-formulario-categoria {
+    display: flex;
+    gap: 10px;
+}
+
+.linha-formulario-categoria input {
+    flex: 1;
+}
+
+.tabela-categorias {
+    width: 100%;
+}
+
+.tabela-categorias th:nth-child(2),
+.tabela-categorias th:nth-child(3),
+.tabela-categorias td:nth-child(2),
+.tabela-categorias td:nth-child(3) {
+    text-align: center;
+}
+
+.tabela-categorias .acoes-tabela {
+    justify-content: center;
 }
 
 .apresentacao-filial {
