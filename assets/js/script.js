@@ -930,6 +930,30 @@ function itensDoPedido(pedido) {
     return Array.isArray(pedido.itens) ? pedido.itens : [];
 }
 
+function itensAgrupadosPorCategoria(itens) {
+    const grupos = new Map();
+    itens.forEach((item, indice) => {
+        const categoria = buscarProduto(item.produtoId)?.categoria || "Outros";
+        if (!grupos.has(categoria)) grupos.set(categoria, []);
+        grupos.get(categoria).push({ item, indice });
+    });
+    return [...grupos.entries()]
+        .sort(([categoriaA], [categoriaB]) => categoriaA.localeCompare(categoriaB, "pt-BR"))
+        .map(([categoria, itensDaCategoria]) => ({
+            categoria,
+            itens: itensDaCategoria.sort((a, b) => a.item.produtoNome.localeCompare(b.item.produtoNome, "pt-BR"))
+        }));
+}
+
+function renderizarItensAgrupadosPorCategoria(itens, renderizarItem, classe = "") {
+    return itensAgrupadosPorCategoria(itens).map(({ categoria, itens: itensDaCategoria }) => `
+        <section class="grupo-itens-categoria ${classe}">
+            <h4>${escaparHTML(categoria)} <span>${itensDaCategoria.length} ${itensDaCategoria.length === 1 ? "item" : "itens"}</span></h4>
+            <div class="lista-itens-categoria">${itensDaCategoria.map(({ item, indice }) => renderizarItem(item, indice)).join("")}</div>
+        </section>
+    `).join("");
+}
+
 function itensEmAcao(pedido) {
     return itensSelecionadosPedido.length
         ? itensDoPedido(pedido).filter((item) => itensSelecionadosPedido.includes(item.produtoId))
@@ -1520,12 +1544,12 @@ function renderizarPedidos() {
             const situacao = situacaoDoPedido(pedido);
             const compra = pedido.compraPrevista ? `Chegada no CD: ${formatarDataSimples(pedido.compraPrevista)}` : "";
             const entrega = pedido.entregaPrevista ? `Entrega prevista: ${formatarDataSimples(pedido.entregaPrevista)}` : "";
-            const listaItens = itens.map((item) => `
+            const listaItens = renderizarItensAgrupadosPorCategoria(itens, (item) => `
                 <div class="item-pedido-resumo">
                     <strong>${escaparHTML(item.produtoNome)}</strong>
                     <span>Filial: ${formatarNumero(item.estoqueInformado)} · Pedido: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span>
                 </div>
-            `).join("");
+            `, "grupo-itens-categoria-resumo");
             const haItensPendentes = itens.some((item) => (item.situacao || pedido.situacao) === "pendente");
             const acoes = haItensPendentes
                 ? `<button type="button" class="botao-acao acao-aprovar" data-acao="analisar-pedido" data-pedido-id="${pedido.id}">Analisar itens</button>`
@@ -1553,7 +1577,7 @@ function abrirModalAnalisarPedido(pedidoId) {
     itensDoPedido(pedido).forEach((item) => { item.situacao ||= pedido.situacao || "pendente"; });
 
     elementos.tituloModalAnalisarPedido.textContent = `Pedido da filial ${filial?.nome || ""}`.trim();
-    elementos.listaAnalisarPedido.innerHTML = itensDoPedido(pedido).map((item) => {
+    elementos.listaAnalisarPedido.innerHTML = renderizarItensAgrupadosPorCategoria(itensDoPedido(pedido), (item) => {
         const situacao = situacaoDoItemPedido(item, pedido);
         const acoes = situacao === "pendente"
             ? `<div class="acoes-tabela"><button type="button" class="botao-acao acao-aprovar" data-acao="aprovar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Aprovar</button><button type="button" class="botao-acao acao-perigo" data-acao="recusar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Recusar</button></div>`
@@ -1561,7 +1585,7 @@ function abrirModalAnalisarPedido(pedidoId) {
                 ? `<div class="acoes-tabela"><button type="button" class="botao-acao acao-aprovar" data-acao="receber-compra-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Receber compra</button><button type="button" class="botao-acao acao-perigo" data-acao="recusar-item-pedido" data-pedido-id="${pedido.id}" data-produto-id="${item.produtoId}">Recusar</button></div>`
                 : "";
         return `<article class="item-analise-pedido"><div class="item-analise-informacoes"><strong>${escaparHTML(item.produtoNome)}</strong><span>Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span><span>Estoque informado pela filial: ${formatarNumero(item.estoqueInformado)} ${escaparHTML(item.unidade)}</span>${item.observacaoMatriz ? `<span>${escaparHTML(item.observacaoMatriz)}</span>` : ""}</div><div class="item-analise-acoes"><span class="selo-tipo ${classeSituacaoPedido(situacao)}">${textoSituacaoPedido(situacao)}</span>${acoes}</div></article>`;
-    }).join("");
+    }, "grupo-itens-categoria-analise");
     const todosAnalisados = itensDoPedido(pedido).every((item) => ["aprovado", "recusado"].includes(situacaoDoItemPedido(item, pedido)));
     const pedidoJaEnviado = itensDoPedido(pedido).some((item) => ["em_transito", "recebido"].includes(item.situacao || pedido.situacao));
     elementos.botaoEnviarPedidoAnalisado.disabled = !todosAnalisados;
@@ -1857,7 +1881,7 @@ function renderizarPortalFilial() {
                         <span class="selo-tipo ${classeSituacaoPedido(pedido.situacao)}">${textoSituacaoPedido(pedido.situacao)}</span>
                     </div>
                     <div class="itens-pedido-resumo">
-                        ${itensDoPedido(pedido).map((item) => {
+                        ${renderizarItensAgrupadosPorCategoria(itensDoPedido(pedido), (item) => {
                             const situacaoItem = item.situacao || pedido.situacao;
                             const motivoRecusa = item.observacaoMatriz || pedido.observacaoMatriz || "Motivo não informado pelo CD.";
                             return `
@@ -1867,7 +1891,7 @@ function renderizarPortalFilial() {
                                     ${situacaoItem === "recusado" ? `<span class="motivo-recusa-pedido">Motivo da recusa: ${escaparHTML(motivoRecusa)}</span>` : ""}
                                 </div>
                             `;
-                        }).join("")}
+                        }, "grupo-itens-categoria-filial")}
                     </div>
                     ${compra ? `<p><strong>Chegada prevista no CD:</strong> ${escaparHTML(compra)}</p>` : ""}
                     ${entrega ? `<p><strong>Entrega prevista:</strong> ${escaparHTML(entrega)}</p>` : ""}
@@ -1885,7 +1909,7 @@ function renderizarPortalFilial() {
 function renderizarCarrinhoPedido() {
     elementos.quantidadeItensCarrinho.textContent = `${itensDoPedidoAtual.length} ${itensDoPedidoAtual.length === 1 ? "item" : "itens"}`;
     elementos.itensCarrinhoPedido.innerHTML = itensDoPedidoAtual.length
-        ? itensDoPedidoAtual.map((item, indice) => `
+        ? renderizarItensAgrupadosPorCategoria(itensDoPedidoAtual, (item, indice) => `
             <div class="linha-carrinho">
                 <div>
                     <strong>${escaparHTML(item.produtoNome)}</strong>
@@ -1893,7 +1917,7 @@ function renderizarCarrinhoPedido() {
                 </div>
                 <button type="button" class="botao-remover-item" data-acao="remover-item-pedido" data-indice-item="${indice}">Remover</button>
             </div>
-        `).join("")
+        `, "grupo-itens-categoria-carrinho")
         : "<p class=\"resumo-vazio\">Adicione produtos para montar a lista do pedido.</p>";
 }
 
@@ -2510,14 +2534,14 @@ function abrirModalConfirmarRecebimento(pedidoId) {
     if (!itensEnviados.length) return;
 
     pedidoEmConfirmacaoId = pedido.id;
-    elementos.listaConfirmacaoRecebimento.innerHTML = itensDoPedido(pedido).map((item) => {
+    elementos.listaConfirmacaoRecebimento.innerHTML = renderizarItensAgrupadosPorCategoria(itensDoPedido(pedido), (item) => {
         const situacao = item.situacao || pedido.situacao;
         const enviado = situacao === "em_transito";
         const descricao = enviado
             ? "Enviado pelo CD — confirme o recebimento deste item."
             : `Não será enviado: ${item.observacaoMatriz || "item cancelado pelo CD."}`;
         return `<article class="item-analise-pedido"><div class="item-analise-informacoes"><strong>${escaparHTML(item.produtoNome)}</strong><span>Solicitado: ${formatarNumero(item.quantidadeSolicitada)} ${escaparHTML(item.unidade)}</span><span>${escaparHTML(descricao)}</span></div><div class="item-analise-acoes"><span class="selo-tipo ${classeSituacaoPedido(situacao)}">${enviado ? "Enviado" : textoSituacaoPedido(situacao)}</span></div></article>`;
-    }).join("");
+    }, "grupo-itens-categoria-confirmacao");
     abrirModal(elementos.modalConfirmarRecebimento);
 }
 
@@ -2528,7 +2552,7 @@ function abrirModalDetalhesPedido(pedidoId) {
 
     elementos.tituloModalDetalhesPedido.textContent = `Pedido de ${formatarData(pedido.criadoEm)}`;
     elementos.resumoDetalhesPedido.textContent = pedido.observacao || "Sem observação geral.";
-    elementos.listaDetalhesPedido.innerHTML = itensDoPedido(pedido).map((item) => {
+    elementos.listaDetalhesPedido.innerHTML = renderizarItensAgrupadosPorCategoria(itensDoPedido(pedido), (item) => {
         const situacao = item.situacao || pedido.situacao || "pendente";
         const foiEnviado = ["em_transito", "recebido"].includes(situacao);
         const quantidadeEnviada = foiEnviado ? (item.quantidadeEnviada || item.quantidadeSolicitada) : 0;
@@ -2555,7 +2579,7 @@ function abrirModalDetalhesPedido(pedidoId) {
                 </div>
             </article>
         `;
-    }).join("");
+    }, "grupo-itens-categoria-detalhes");
     abrirModal(elementos.modalDetalhesPedido);
 }
 

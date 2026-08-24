@@ -1171,6 +1171,55 @@ tbody tr:last-child td {
     padding: 15px 0;
 }
 
+.grupo-itens-categoria {
+    margin: 12px 0;
+    overflow: hidden;
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+    background: #fffdfa;
+}
+
+.grupo-itens-categoria h4 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 0;
+    padding: 9px 12px;
+    color: var(--marrom);
+    background: var(--salmão-claro);
+    font-size: 13px;
+}
+
+.grupo-itens-categoria h4 span {
+    color: var(--marrom-claro);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.lista-itens-categoria {
+    display: grid;
+    gap: 8px;
+    padding: 0 12px;
+}
+
+.lista-itens-categoria .linha-carrinho:last-child {
+    border-bottom: 0;
+}
+
+.grupo-itens-categoria-resumo {
+    margin: 8px 0;
+}
+
+.grupo-itens-categoria-resumo .lista-itens-categoria {
+    padding: 10px 12px;
+}
+
+.grupo-itens-categoria-resumo .item-pedido-resumo {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+}
+
 .item-pedido-resumo {
     display: flex;
     align-items: center;
