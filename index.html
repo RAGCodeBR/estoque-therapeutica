@@ -65,10 +65,15 @@
                         </select>
                     </label>
                     <div class="menu-perfil" id="menu-perfil">
+                        <p class="usuario-logado" id="usuario-logado" aria-live="polite">Olá!</p>
                         <button class="botao-perfil" type="button" id="botao-perfil" aria-label="Abrir menu do usuário" aria-haspopup="true" aria-expanded="false">
                             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path></svg>
                         </button>
                         <div class="menu-perfil-opcoes" id="menu-perfil-opcoes" role="menu" hidden>
+                            <div class="resumo-perfil" aria-label="Dados do usuário logado">
+                                <strong id="nome-usuario-logado"></strong>
+                                <span id="contexto-usuario-logado"></span>
+                            </div>
                             <button type="button" id="botao-alterar-senha" role="menuitem">Alterar senha</button>
                             <button type="button" id="botao-sair" role="menuitem">Sair</button>
                         </div>

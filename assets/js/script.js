@@ -147,6 +147,9 @@ const elementos = {
     menuPerfil: document.querySelector("#menu-perfil"),
     botaoPerfil: document.querySelector("#botao-perfil"),
     menuPerfilOpcoes: document.querySelector("#menu-perfil-opcoes"),
+    usuarioLogado: document.querySelector("#usuario-logado"),
+    nomeUsuarioLogado: document.querySelector("#nome-usuario-logado"),
+    contextoUsuarioLogado: document.querySelector("#contexto-usuario-logado"),
     botaoAlterarSenha: document.querySelector("#botao-alterar-senha"),
     botaoSair: document.querySelector("#botao-sair"),
     modalAlterarSenha: document.querySelector("#modal-alterar-senha"),
@@ -559,6 +562,19 @@ function normalizarPedido(pedido) {
         criadoEm: pedido?.criadoEm ?? pedido?.createdAt ?? new Date().toISOString(),
         analisadoEm: pedido?.analisadoEm ?? pedido?.handledAt ?? null
     };
+}
+
+function exibirUsuarioLogado() {
+    if (!perfilAtual) return;
+    const nome = perfilAtual.nome?.trim() || "Usuário";
+    const descricaoPapel = usuarioEhCD() ? "Administrador do CD" : "Usuário de filial";
+    const filial = perfilAtual.filial_id ? buscarFilial(perfilAtual.filial_id) : null;
+
+    elementos.usuarioLogado.textContent = `Olá, ${nome}`;
+    elementos.nomeUsuarioLogado.textContent = nome;
+    elementos.contextoUsuarioLogado.textContent = filial
+        ? `${descricaoPapel} · ${filial.nome}`
+        : descricaoPapel;
 }
 
 function normalizarFilial(filial) {
@@ -3573,6 +3589,7 @@ async function iniciarAplicacaoAutenticada() {
     if (error || !perfil) { console.error(error); notificar("Perfil não encontrado. Execute supabase/reparar-perfis.sql no SQL Editor e defina o administrador.", "erro"); return; }
     perfilAtual = perfil;
     aplicarPermissoesDoUsuario();
+    exibirUsuarioLogado();
     const navegacaoSalva = recuperarNavegacaoAtual();
     if (usuarioEhCD() && navegacaoSalva?.portal && [CENTRO_DISTRIBUICAO_ID, ...estado.filiais.map((filial) => filial.id)].includes(navegacaoSalva.portal)) {
         portalAtual = navegacaoSalva.portal;
