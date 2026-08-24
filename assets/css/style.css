@@ -742,6 +742,10 @@ td {
     vertical-align: middle;
 }
 
+#pagina-pedidos td {
+    vertical-align: top;
+}
+
 th {
     color: var(--marrom-claro);
     background: var(--fundo);
