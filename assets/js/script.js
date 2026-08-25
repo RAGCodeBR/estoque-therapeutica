@@ -4,6 +4,7 @@ const LEGACY_MOVEMENTS_KEY = "movimentacoes-therapeutica";
 const LEGACY_STORAGE_KEYS = ["therapeutica-estoque-v3"];
 const CENTRO_DISTRIBUICAO_ID = "cd";
 const NAVEGACAO_STORAGE_KEY = "therapeutica-navegacao-atual";
+const MENU_REDUZIDO_STORAGE_KEY = "therapeutica-menu-reduzido";
 let clienteSupabase = null;
 let usuarioAtual = null;
 let perfilAtual = null;
@@ -56,7 +57,9 @@ const titulosPaginas = {
     "configuracoes-backup": "Dados e backup"
 };
 const elementos = {
+    menuLateral: document.querySelector(".menu-lateral"),
     navegacao: [...document.querySelectorAll(".item-menu")],
+    botaoRecolherMenu: document.querySelector("#botao-recolher-menu"),
     paginas: [...document.querySelectorAll(".pagina")],
     menuMatriz: document.querySelector("#menu-matriz"),
     menuFilial: document.querySelector("#menu-filial"),
@@ -208,8 +211,28 @@ const elementos = {
     listaDetalhesPedido: document.querySelector("#lista-detalhes-pedido")
 };
 
+function atualizarMenuLateral(reduzido) {
+    elementos.menuLateral?.classList.toggle("menu-reduzido", reduzido);
+    elementos.botaoRecolherMenu?.setAttribute("aria-expanded", String(!reduzido));
+    elementos.botaoRecolherMenu?.setAttribute("aria-label", reduzido ? "Expandir barra lateral" : "Recolher barra lateral");
+    elementos.botaoRecolherMenu?.setAttribute("title", reduzido ? "Expandir barra lateral" : "Recolher barra lateral");
+    const textoBotao = elementos.botaoRecolherMenu?.querySelector(".texto-botao-recolher");
+    if (textoBotao) textoBotao.textContent = reduzido ? "Expandir menu" : "Recolher menu";
+    elementos.navegacao.forEach((item) => {
+        const texto = item.querySelector("span:not(.icone):not(.notificacao-pedidos)")?.textContent.trim();
+        if (texto) item.title = reduzido ? texto : "";
+    });
+}
+
+try {
+    atualizarMenuLateral(localStorage.getItem(MENU_REDUZIDO_STORAGE_KEY) === "true");
+} catch {
+    atualizarMenuLateral(false);
+}
+
 let paginaAtual = "dashboard";
 let tipoMovimentacaoAtual = "entrada";
+let ordenacaoProdutos = "nome";
 let ordenacaoQuantidade = "crescente";
 let produtoSelecionadoMovimentacao = "";
 let itensXmlMovimentacao = [];
@@ -1449,6 +1472,10 @@ function renderizarProdutos() {
             return (!busca || texto.includes(busca)) && (!categoria || produto.categoria === categoria);
         })
         .sort((a, b) => {
+            if (ordenacaoProdutos === "nome") {
+                return a.nome.localeCompare(b.nome, "pt-BR");
+            }
+
             const diferencaQuantidade = a.quantidade - b.quantidade;
 
             if (diferencaQuantidade !== 0) {
@@ -1465,8 +1492,6 @@ function renderizarProdutos() {
             const dataArquivamento = produto.arquivadoEm ? `<span class="detalhe-celula">Arquivado em ${formatarData(produto.arquivadoEm)}</span>` : "";
             const acoes = produto.ativo
                 ? `
-                    <button type="button" class="botao-acao acao-entrada" data-acao="movimentar" data-produto-id="${produto.id}" data-tipo="entrada">Entrada</button>
-                    <button type="button" class="botao-acao acao-saida" data-acao="movimentar" data-produto-id="${produto.id}" data-tipo="saida">Saída</button>
                     <button type="button" class="botao-acao" data-acao="editar-produto" data-produto-id="${produto.id}">Editar</button>
                     <button type="button" class="botao-acao acao-perigo" data-acao="arquivar-produto" data-produto-id="${produto.id}">Arquivar</button>
                     <button type="button" class="botao-acao acao-perigo" data-acao="excluir-produto" data-produto-id="${produto.id}">Excluir</button>
@@ -3058,6 +3083,16 @@ elementos.botaoConfiguracoes.addEventListener("click", () => {
     elementos.botaoConfiguracoes.setAttribute("aria-expanded", String(!aberto));
 });
 
+elementos.botaoRecolherMenu?.addEventListener("click", () => {
+    const reduzido = !elementos.menuLateral.classList.contains("menu-reduzido");
+    atualizarMenuLateral(reduzido);
+    try {
+        localStorage.setItem(MENU_REDUZIDO_STORAGE_KEY, String(reduzido));
+    } catch {
+        // O menu continua funcionando quando o armazenamento local não estiver disponível.
+    }
+});
+
 document.addEventListener("click", (evento) => {
     const fechar = evento.target.closest("[data-fechar-modal]");
 
@@ -3109,7 +3144,11 @@ elementos.filtroStatusProdutos.addEventListener("change", () => {
     renderizarProdutos();
 });
 elementos.botaoOrdenarQuantidade.addEventListener("click", () => {
-    ordenacaoQuantidade = ordenacaoQuantidade === "crescente" ? "decrescente" : "crescente";
+    if (ordenacaoProdutos === "quantidade") {
+        ordenacaoQuantidade = ordenacaoQuantidade === "crescente" ? "decrescente" : "crescente";
+    }
+
+    ordenacaoProdutos = "quantidade";
     const crescente = ordenacaoQuantidade === "crescente";
 
     elementos.botaoOrdenarQuantidade.textContent = crescente ? "↑" : "↓";

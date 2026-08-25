@@ -14,7 +14,7 @@
                 <img class="logo-nav" src="./assets/img/therapeutica-logo-01.png">
             </div>
 
-            <nav class="menu-navegacao">
+            <nav class="menu-navegacao" id="menu-navegacao">
                 <div class="grupo-menu" id="menu-matriz">
                     <p class="rotulo-menu">Centro de Distribuição</p>
                     <button class="item-menu menu-ativo" data-pagina="dashboard"><span class="icone icone-inicio" aria-hidden="true"></span><span>Início</span></button>
@@ -40,6 +40,11 @@
                     <button class="item-menu" data-pagina="meus-pedidos"><span class="icone icone-historico" aria-hidden="true"></span><span>Meus pedidos</span></button>
                 </div>
             </nav>
+
+            <button class="botao-recolher-menu" type="button" id="botao-recolher-menu" aria-controls="menu-navegacao" aria-expanded="true" aria-label="Recolher barra lateral" title="Recolher barra lateral">
+                <span class="icone icone-recolher-menu" aria-hidden="true"></span>
+                <span class="texto-botao-recolher">Recolher menu</span>
+            </button>
 
         </aside>
 
@@ -176,7 +181,7 @@
                                         <th>Categoria</th>
                                         <th>
                                             <span class="cabecalho-ordenavel">Quantidade
-                                                <button id="ordenar-quantidade" class="botao-ordenacao" type="button" aria-label="Ordenar produtos por quantidade, crescente" title="Ordenar por quantidade: crescente">&#8593;</button>
+                                                <button id="ordenar-quantidade" class="botao-ordenacao" type="button" aria-label="Ordenar produtos por quantidade, crescente" aria-pressed="false" title="Ordenar por quantidade: crescente">&#8593;</button>
                                             </span>
                                         </th>
                                         <th>Mínimo</th>
