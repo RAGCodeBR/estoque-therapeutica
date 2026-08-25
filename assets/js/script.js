@@ -4,6 +4,7 @@ const LEGACY_MOVEMENTS_KEY = "movimentacoes-therapeutica";
 const LEGACY_STORAGE_KEYS = ["therapeutica-estoque-v3"];
 const CENTRO_DISTRIBUICAO_ID = "cd";
 const NAVEGACAO_STORAGE_KEY = "therapeutica-navegacao-atual";
+const MENU_REDUZIDO_STORAGE_KEY = "therapeutica-menu-reduzido";
 let clienteSupabase = null;
 let usuarioAtual = null;
 let perfilAtual = null;
@@ -56,7 +57,9 @@ const titulosPaginas = {
     "configuracoes-backup": "Dados e backup"
 };
 const elementos = {
+    menuLateral: document.querySelector(".menu-lateral"),
     navegacao: [...document.querySelectorAll(".item-menu")],
+    botaoRecolherMenu: document.querySelector("#botao-recolher-menu"),
     paginas: [...document.querySelectorAll(".pagina")],
     menuMatriz: document.querySelector("#menu-matriz"),
     menuFilial: document.querySelector("#menu-filial"),
@@ -205,6 +208,25 @@ const elementos = {
     resumoDetalhesPedido: document.querySelector("#resumo-detalhes-pedido"),
     listaDetalhesPedido: document.querySelector("#lista-detalhes-pedido")
 };
+
+function atualizarMenuLateral(reduzido) {
+    elementos.menuLateral?.classList.toggle("menu-reduzido", reduzido);
+    elementos.botaoRecolherMenu?.setAttribute("aria-expanded", String(!reduzido));
+    elementos.botaoRecolherMenu?.setAttribute("aria-label", reduzido ? "Expandir barra lateral" : "Recolher barra lateral");
+    elementos.botaoRecolherMenu?.setAttribute("title", reduzido ? "Expandir barra lateral" : "Recolher barra lateral");
+    const textoBotao = elementos.botaoRecolherMenu?.querySelector(".texto-botao-recolher");
+    if (textoBotao) textoBotao.textContent = reduzido ? "Expandir menu" : "Recolher menu";
+    elementos.navegacao.forEach((item) => {
+        const texto = item.querySelector("span:not(.icone):not(.notificacao-pedidos)")?.textContent.trim();
+        if (texto) item.title = reduzido ? texto : "";
+    });
+}
+
+try {
+    atualizarMenuLateral(localStorage.getItem(MENU_REDUZIDO_STORAGE_KEY) === "true");
+} catch {
+    atualizarMenuLateral(false);
+}
 
 let paginaAtual = "dashboard";
 let tipoMovimentacaoAtual = "entrada";
@@ -3053,6 +3075,16 @@ elementos.botaoConfiguracoes.addEventListener("click", () => {
     const aberto = !elementos.submenuConfiguracoes.hidden;
     elementos.submenuConfiguracoes.hidden = aberto;
     elementos.botaoConfiguracoes.setAttribute("aria-expanded", String(!aberto));
+});
+
+elementos.botaoRecolherMenu?.addEventListener("click", () => {
+    const reduzido = !elementos.menuLateral.classList.contains("menu-reduzido");
+    atualizarMenuLateral(reduzido);
+    try {
+        localStorage.setItem(MENU_REDUZIDO_STORAGE_KEY, String(reduzido));
+    } catch {
+        // O menu continua funcionando quando o armazenamento local não estiver disponível.
+    }
 });
 
 document.addEventListener("click", (evento) => {
