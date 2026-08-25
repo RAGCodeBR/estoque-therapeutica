@@ -44,7 +44,28 @@ formulario?.addEventListener('submit', async (evento) => {
     const cliente = obterClienteSupabase();
     if (!cliente) return informar('Não foi possível carregar o serviço de login.');
     informar('Entrando...', false);
-    const { error } = await cliente.auth.signInWithPassword({ email: emailParaLogin(email.value), password: senha.value });
+    const { data, error } = await cliente.auth.signInWithPassword({ email: emailParaLogin(email.value), password: senha.value });
     if (error) return informar('E-mail ou senha inválidos.');
+    const { data: perfil, error: erroPerfil } = await cliente.from('usuarios')
+        .select('deve_alterar_senha, senha_temporaria_ate')
+        .eq('id', data.user.id)
+        .single();
+    if (erroPerfil || !perfil) {
+        await cliente.auth.signOut();
+        return informar('Não foi possível validar o acesso deste usuário.');
+    }
+    if (perfil.deve_alterar_senha) {
+        const expirada = !perfil.senha_temporaria_ate || new Date(perfil.senha_temporaria_ate).getTime() <= Date.now();
+        if (expirada) {
+            await cliente.auth.signOut();
+            return informar('Sua senha temporária expirou. Solicite uma nova senha ao administrador.');
+        }
+        window.location.replace('./redefinir-senha.html?temporaria=1');
+        return;
+    }
     window.location.replace('./index.html');
 });
+
+if (new URLSearchParams(window.location.search).get('senha-expirada') === '1') {
+    informar('Sua senha temporária expirou. Solicite uma nova senha ao administrador.');
+}

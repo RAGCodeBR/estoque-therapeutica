@@ -708,6 +708,11 @@
                     <input type="password" id="usuario-senha-inicial" minlength="8" autocomplete="new-password">
                     <small>Definida pelo administrador. O usuário poderá alterá-la depois.</small>
                 </div>
+                <div id="campo-senha-temporaria" hidden>
+                    <label for="usuario-senha-temporaria">Nova senha temporária</label>
+                    <input type="password" id="usuario-senha-temporaria" minlength="8" autocomplete="new-password">
+                    <small>Válida por 48 horas. No próximo acesso, o usuário deverá criar uma senha definitiva.</small>
+                </div>
                 <label for="usuario-papel">Papel</label>
                 <select id="usuario-papel" required><option value="filial">Filial</option><option value="cd_admin">Administrador do CD</option></select>
                 <label for="usuario-filial">Filial vinculada</label>

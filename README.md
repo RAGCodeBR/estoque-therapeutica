@@ -5,6 +5,7 @@
 - O acesso é feito com e-mail e senha pelo Supabase Auth.
 - Antes de abrir o sistema, execute `node scripts/gerar-config.js` para gerar `assets/js/env.js` a partir de `.env.local`.
 - Execute `supabase/supabase-schema.sql`, `supabase/usuarios-auth.sql`, `supabase/usuarios-admin.sql`, `supabase/concorrencia.sql` e `supabase/pedido-itens-status.sql`, nessa ordem, no SQL Editor.
+- Para habilitar senhas temporárias, aplique `supabase/migrations/20260825090000_senhas_temporarias.sql` no SQL Editor e publique as funções `redefinir-senha-temporaria` e `concluir-senha-temporaria` (`supabase functions deploy <nome-da-função>`).
 - Cadastros novos entram como usuários de filial. Promova o primeiro administrador usando o comando comentado em `usuarios-auth.sql`.
 - O banco usa Row Level Security: filiais veem somente seu estoque e pedidos; administradores do CD administram o estoque global.
 

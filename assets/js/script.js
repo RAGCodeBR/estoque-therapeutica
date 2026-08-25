@@ -193,6 +193,8 @@ const elementos = {
     usuarioNome: document.querySelector("#usuario-nome"),
     campoSenhaInicial: document.querySelector("#campo-senha-inicial"),
     usuarioSenhaInicial: document.querySelector("#usuario-senha-inicial"),
+    campoSenhaTemporaria: document.querySelector("#campo-senha-temporaria"),
+    usuarioSenhaTemporaria: document.querySelector("#usuario-senha-temporaria"),
     usuarioPapel: document.querySelector("#usuario-papel"),
     usuarioFilial: document.querySelector("#usuario-filial"),
     botaoSalvarUsuario: document.querySelector("#botao-salvar-usuario"),
@@ -1989,6 +1991,8 @@ function abrirModalUsuario(id) {
     elementos.usuarioNome.value = usuario.nome || "";
     elementos.campoSenhaInicial.hidden = true;
     elementos.usuarioSenhaInicial.required = false;
+    elementos.campoSenhaTemporaria.hidden = false;
+    elementos.usuarioSenhaTemporaria.required = false;
     elementos.usuarioPapel.value = usuario.papel;
     elementos.usuarioFilial.value = usuario.filial_id || "";
     elementos.usuarioFilial.disabled = usuario.papel === "cd_admin";
@@ -2005,6 +2009,8 @@ function abrirModalNovoUsuario() {
     elementos.usuarioEmail.disabled = false;
     elementos.campoSenhaInicial.hidden = false;
     elementos.usuarioSenhaInicial.required = true;
+    elementos.campoSenhaTemporaria.hidden = true;
+    elementos.usuarioSenhaTemporaria.required = false;
     elementos.usuarioFilial.disabled = false;
     elementos.tituloModalUsuario.textContent = "Novo usuário";
     elementos.botaoSalvarUsuario.textContent = "Criar usuário";
@@ -3551,15 +3557,31 @@ elementos.formularioUsuario.addEventListener("submit", async (evento) => {
         return;
     }
     const usuarioEditadoId = elementos.usuarioId.value;
+    const senhaTemporaria = elementos.usuarioSenhaTemporaria.value;
+    if (senhaTemporaria && senhaTemporaria.length < 8) {
+        elementos.mensagemUsuario.textContent = "A senha temporária deve ter pelo menos 8 caracteres.";
+        return;
+    }
     const alterouProprioPapel = usuarioAtual?.id === usuarioEditadoId && perfilAtual?.papel !== papel;
     const { error } = await clienteSupabase.from("usuarios").update({ nome: elementos.usuarioNome.value.trim(), papel, filial_id: filialId }).eq("id", usuarioEditadoId);
     if (error) { console.error(error); elementos.mensagemUsuario.textContent = "Não foi possível salvar as alterações."; return; }
+    if (senhaTemporaria) {
+        elementos.mensagemUsuario.textContent = "Definindo senha temporária...";
+        const { error: erroSenha } = await clienteSupabase.functions.invoke("redefinir-senha-temporaria", {
+            body: { usuario_id: usuarioEditadoId, senha: senhaTemporaria }
+        });
+        if (erroSenha) {
+            console.error(erroSenha);
+            elementos.mensagemUsuario.textContent = "Os dados foram salvos, mas não foi possível definir a senha temporária.";
+            return;
+        }
+    }
     fecharModal(elementos.modalUsuario);
     if (alterouProprioPapel) {
         notificar("Saia do sistema para aplicar a alteração.");
         return;
     }
-    notificar("Usuário atualizado.");
+    notificar(senhaTemporaria ? "Usuário atualizado. A senha temporária expira em 48 horas." : "Usuário atualizado.");
     await carregarUsuarios();
 });
 elementos.botaoExportar.addEventListener("click", exportarBackup);
@@ -3583,10 +3605,20 @@ async function iniciarAplicacaoAutenticada() {
     if (!session) { window.location.replace("./login.html"); return; }
     usuarioAtual = session.user;
     const { data: perfil, error } = await clienteSupabase.from("usuarios")
-        .select("id, nome, papel, filial_id")
+        .select("id, nome, papel, filial_id, deve_alterar_senha, senha_temporaria_ate")
         .eq("id", usuarioAtual.id)
         .single();
     if (error || !perfil) { console.error(error); notificar("Perfil não encontrado. Execute supabase/reparar-perfis.sql no SQL Editor e defina o administrador.", "erro"); return; }
+    if (perfil.deve_alterar_senha) {
+        const expirada = !perfil.senha_temporaria_ate || new Date(perfil.senha_temporaria_ate).getTime() <= Date.now();
+        if (expirada) {
+            await clienteSupabase.auth.signOut();
+            window.location.replace("./login.html?senha-expirada=1");
+            return;
+        }
+        window.location.replace("./redefinir-senha.html?temporaria=1");
+        return;
+    }
     perfilAtual = perfil;
     aplicarPermissoesDoUsuario();
     exibirUsuarioLogado();
