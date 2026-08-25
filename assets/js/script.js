@@ -208,6 +208,7 @@ const elementos = {
 
 let paginaAtual = "dashboard";
 let tipoMovimentacaoAtual = "entrada";
+let ordenacaoProdutos = "nome";
 let ordenacaoQuantidade = "crescente";
 let produtoSelecionadoMovimentacao = "";
 let itensXmlMovimentacao = [];
@@ -1447,6 +1448,10 @@ function renderizarProdutos() {
             return (!busca || texto.includes(busca)) && (!categoria || produto.categoria === categoria);
         })
         .sort((a, b) => {
+            if (ordenacaoProdutos === "nome") {
+                return a.nome.localeCompare(b.nome, "pt-BR");
+            }
+
             const diferencaQuantidade = a.quantidade - b.quantidade;
 
             if (diferencaQuantidade !== 0) {
@@ -1463,8 +1468,6 @@ function renderizarProdutos() {
             const dataArquivamento = produto.arquivadoEm ? `<span class="detalhe-celula">Arquivado em ${formatarData(produto.arquivadoEm)}</span>` : "";
             const acoes = produto.ativo
                 ? `
-                    <button type="button" class="botao-acao acao-entrada" data-acao="movimentar" data-produto-id="${produto.id}" data-tipo="entrada">Entrada</button>
-                    <button type="button" class="botao-acao acao-saida" data-acao="movimentar" data-produto-id="${produto.id}" data-tipo="saida">Saída</button>
                     <button type="button" class="botao-acao" data-acao="editar-produto" data-produto-id="${produto.id}">Editar</button>
                     <button type="button" class="botao-acao acao-perigo" data-acao="arquivar-produto" data-produto-id="${produto.id}">Arquivar</button>
                     <button type="button" class="botao-acao acao-perigo" data-acao="excluir-produto" data-produto-id="${produto.id}">Excluir</button>
@@ -3103,7 +3106,11 @@ elementos.filtroStatusProdutos.addEventListener("change", () => {
     renderizarProdutos();
 });
 elementos.botaoOrdenarQuantidade.addEventListener("click", () => {
-    ordenacaoQuantidade = ordenacaoQuantidade === "crescente" ? "decrescente" : "crescente";
+    if (ordenacaoProdutos === "quantidade") {
+        ordenacaoQuantidade = ordenacaoQuantidade === "crescente" ? "decrescente" : "crescente";
+    }
+
+    ordenacaoProdutos = "quantidade";
     const crescente = ordenacaoQuantidade === "crescente";
 
     elementos.botaoOrdenarQuantidade.textContent = crescente ? "↑" : "↓";
