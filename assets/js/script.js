@@ -1612,7 +1612,10 @@ function renderizarEstoqueBaixo() {
 function renderizarPedidos() {
     const statusSelecionado = elementos.filtroStatusPedidos.value;
     const pedidos = [...estado.pedidos]
-        .filter((pedido) => !statusSelecionado || situacaoDoPedido(pedido) === statusSelecionado)
+        .filter((pedido) => !statusSelecionado
+            || (statusSelecionado === "com_item_pendente"
+                ? itensDoPedido(pedido).some((item) => situacaoDoItemPedido(item, pedido) === "pendente")
+                : situacaoDoPedido(pedido) === statusSelecionado))
         .sort((a, b) => new Date(b.criadoEm) - new Date(a.criadoEm));
 
     elementos.tabelaPedidos.innerHTML = pedidos.length
