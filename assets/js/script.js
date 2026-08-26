@@ -60,6 +60,14 @@ const elementos = {
     menuLateral: document.querySelector(".menu-lateral"),
     navegacao: [...document.querySelectorAll(".item-menu")],
     botaoRecolherMenu: document.querySelector("#botao-recolher-menu"),
+    botaoMenuMobile: document.querySelector("#botao-menu-mobile"),
+    botaoSeletorMobile: document.querySelector("#botao-seletor-mobile"),
+    painelSeletorMobile: document.querySelector("#painel-seletor-mobile"),
+    seletorPortalMobile: document.querySelector("#seletor-portal-mobile"),
+    botaoPerfilMobile: document.querySelector("#botao-perfil-mobile"),
+    painelPerfilMobile: document.querySelector("#painel-perfil-mobile"),
+    botaoAlterarSenhaMobile: document.querySelector("#botao-alterar-senha-mobile"),
+    botaoSairMobile: document.querySelector("#botao-sair-mobile"),
     paginas: [...document.querySelectorAll(".pagina")],
     menuMatriz: document.querySelector("#menu-matriz"),
     menuFilial: document.querySelector("#menu-filial"),
@@ -224,6 +232,29 @@ function atualizarMenuLateral(reduzido) {
     });
 }
 
+function fecharMenuMobile() {
+    elementos.menuLateral?.classList.remove("menu-mobile-aberto");
+    elementos.botaoMenuMobile?.setAttribute("aria-expanded", "false");
+}
+
+function fecharSeletorMobile() {
+    if (!elementos.painelSeletorMobile) return;
+    elementos.painelSeletorMobile.hidden = true;
+    elementos.botaoSeletorMobile?.setAttribute("aria-expanded", "false");
+}
+
+function fecharPerfilMobile() {
+    if (!elementos.painelPerfilMobile) return;
+    elementos.painelPerfilMobile.hidden = true;
+    elementos.botaoPerfilMobile?.setAttribute("aria-expanded", "false");
+}
+
+function sincronizarSeletorPortalMobile() {
+    if (!elementos.seletorPortalMobile) return;
+    elementos.seletorPortalMobile.value = elementos.seletorPortal.value;
+    elementos.seletorPortalMobile.disabled = elementos.seletorPortal.disabled;
+}
+
 try {
     atualizarMenuLateral(localStorage.getItem(MENU_REDUZIDO_STORAGE_KEY) === "true");
 } catch {
@@ -274,11 +305,13 @@ function aplicarPermissoesDoUsuario() {
     if (usuarioEhCD()) {
         portalAtual = CENTRO_DISTRIBUICAO_ID;
         elementos.seletorPortal.disabled = false;
+        sincronizarSeletorPortalMobile();
         return;
     }
     portalAtual = perfilAtual.filial_id;
     elementos.seletorPortal.value = portalAtual;
     elementos.seletorPortal.disabled = true;
+    sincronizarSeletorPortalMobile();
 }
 
 function gerarId(prefixo) {
@@ -1369,6 +1402,8 @@ function navegar(pagina, opcoes = {}) {
         ? (tipoMovimentacaoAtual === "entrada" ? "Entradas" : "Saídas")
         : titulosPaginas[paginaAtual];
 
+    sincronizarSeletorPortalMobile();
+    fecharMenuMobile();
     atualizarPaginaMovimentacao();
     atualizarDestinoDaMovimentacao();
     renderizarTudo();
@@ -1500,13 +1535,13 @@ function renderizarProdutos() {
 
             return `
                 <tr>
-                    <td><strong>${escaparHTML(produto.nome)}</strong>${codigo}</td>
-                    <td>${escaparHTML(produto.categoria)}</td>
-                    <td><strong>${formatarNumero(produto.quantidade)}</strong></td>
-                    <td>${formatarNumero(produto.estoqueMinimo)}</td>
-                    <td>${escaparHTML(produto.unidade)}</td>
-                    <td><span class="selo-status ${status.classe}">${status.texto}</span>${dataArquivamento}</td>
-                    <td>
+                    <td data-label="Produto"><strong>${escaparHTML(produto.nome)}</strong>${codigo}</td>
+                    <td data-label="Categoria">${escaparHTML(produto.categoria)}</td>
+                    <td data-label="Quantidade"><strong>${formatarNumero(produto.quantidade)}</strong></td>
+                    <td data-label="Estoque minimo">${formatarNumero(produto.estoqueMinimo)}</td>
+                    <td data-label="Unidade">${escaparHTML(produto.unidade)}</td>
+                    <td data-label="Situacao"><span class="selo-status ${status.classe}">${status.texto}</span>${dataArquivamento}</td>
+                    <td data-label="Acoes">
                         <div class="acoes-tabela">${acoes}</div>
                     </td>
                 </tr>
@@ -1563,12 +1598,12 @@ function renderizarEstoqueBaixo() {
     elementos.tabelaEstoqueBaixo.innerHTML = produtos.length
         ? produtos.map((produto) => `
             <tr>
-                <td><strong>${escaparHTML(produto.nome)}</strong></td>
-                <td>${escaparHTML(produto.categoria)}</td>
-                <td><strong>${formatarNumero(produto.quantidade)}</strong></td>
-                <td>${formatarNumero(produto.estoqueMinimo)}</td>
-                <td>${escaparHTML(produto.unidade)}</td>
-                <td><button type="button" class="botao-acao acao-entrada" data-acao="movimentar" data-produto-id="${produto.id}" data-tipo="entrada">Registrar entrada</button></td>
+                <td data-label="Produto"><strong>${escaparHTML(produto.nome)}</strong></td>
+                <td data-label="Categoria">${escaparHTML(produto.categoria)}</td>
+                <td data-label="Quantidade atual"><strong>${formatarNumero(produto.quantidade)}</strong></td>
+                <td data-label="Estoque minimo">${formatarNumero(produto.estoqueMinimo)}</td>
+                <td data-label="Unidade">${escaparHTML(produto.unidade)}</td>
+                <td data-label="Acao rapida"><button type="button" class="botao-acao acao-entrada" data-acao="movimentar" data-produto-id="${produto.id}" data-tipo="entrada">Registrar entrada</button></td>
             </tr>
         `).join("")
         : "<tr><td colspan=\"6\" class=\"tabela-vazia\">Nenhum produto está com estoque baixo.</td></tr>";
@@ -1600,11 +1635,11 @@ function renderizarPedidos() {
 
             return `
                 <tr>
-                    <td>${formatarData(pedido.criadoEm)}</td>
-                    <td><strong>${escaparHTML(filial?.nome || "Filial não identificada")}</strong></td>
-                    <td>${listaItens}${pedido.observacao ? `<span class="detalhe-celula">${escaparHTML(pedido.observacao)}</span>` : ""}</td>
-                    <td><span class="selo-tipo ${classeSituacaoPedido(situacao)}">${textoSituacaoPedido(situacao)}</span>${compra ? `<span class="detalhe-celula">${escaparHTML(compra)}</span>` : ""}${entrega ? `<span class="detalhe-celula">${escaparHTML(entrega)}</span>` : ""}</td>
-                    <td>${acoes}</td>
+                    <td data-label="Data">${formatarData(pedido.criadoEm)}</td>
+                    <td data-label="Filial"><strong>${escaparHTML(filial?.nome || "Filial não identificada")}</strong></td>
+                    <td data-label="Itens solicitados">${listaItens}${pedido.observacao ? `<span class="detalhe-celula">${escaparHTML(pedido.observacao)}</span>` : ""}</td>
+                    <td data-label="Situacao"><span class="selo-tipo ${classeSituacaoPedido(situacao)}">${textoSituacaoPedido(situacao)}</span>${compra ? `<span class="detalhe-celula">${escaparHTML(compra)}</span>` : ""}${entrega ? `<span class="detalhe-celula">${escaparHTML(entrega)}</span>` : ""}</td>
+                    <td data-label="Acoes">${acoes}</td>
                 </tr>
             `;
         }).join("")
@@ -1656,9 +1691,9 @@ function renderizarCategoriasConfiguracoes() {
     elementos.tabelaCategorias.innerHTML = categorias.map((categoria) => {
         const quantidadeProdutos = estado.produtos.filter((produto) => produto.categoria === categoria).length;
         return `<tr>
-            <td><strong>${escaparHTML(categoria)}</strong></td>
-            <td>${quantidadeProdutos}</td>
-            <td><div class="acoes-tabela">
+            <td data-label="Categoria"><strong>${escaparHTML(categoria)}</strong></td>
+            <td data-label="Produtos">${quantidadeProdutos}</td>
+            <td data-label="Acoes"><div class="acoes-tabela">
                 <button type="button" class="botao-acao" data-acao="editar-categoria" data-categoria="${escaparHTML(categoria)}">Editar</button>
                 <button type="button" class="botao-acao acao-perigo" data-acao="excluir-categoria" data-categoria="${escaparHTML(categoria)}">Excluir</button>
             </div></td>
@@ -1741,9 +1776,9 @@ function renderizarUnidadesConfiguracoes() {
     elementos.tabelaUnidades.innerHTML = unidades.map((unidade) => {
         const quantidadeProdutos = estado.produtos.filter((produto) => produto.unidade === unidade).length;
         return `<tr>
-            <td><strong>${escaparHTML(unidade)}</strong></td>
-            <td>${quantidadeProdutos}</td>
-            <td><div class="acoes-tabela">
+            <td data-label="Unidade"><strong>${escaparHTML(unidade)}</strong></td>
+            <td data-label="Produtos">${quantidadeProdutos}</td>
+            <td data-label="Acoes"><div class="acoes-tabela">
                 <button type="button" class="botao-acao" data-acao="editar-unidade" data-unidade="${escaparHTML(unidade)}">Editar</button>
                 <button type="button" class="botao-acao acao-perigo" data-acao="excluir-unidade" data-unidade="${escaparHTML(unidade)}">Excluir</button>
             </div></td>
@@ -1860,11 +1895,11 @@ function renderizarHistorico() {
 
             return `
                 <tr>
-                    <td>${formatarData(movimentacao.criadoEm)}</td>
-                    <td><span class="selo-tipo ${classeTipoMovimentacao(movimentacao.tipo)}">${textoTipoMovimentacao(movimentacao.tipo)}</span></td>
-                    <td><strong>${escaparHTML(movimentacao.produtoNome)}</strong><span class="detalhe-celula">${saldo}</span></td>
-                    <td>${formatarNumero(movimentacao.quantidade)} ${escaparHTML(movimentacao.unidade)}</td>
-                    <td>${escaparHTML(destino)}${movimentacao.observacao && filial ? `<span class="detalhe-celula">${escaparHTML(movimentacao.observacao)}</span>` : ""}</td>
+                    <td data-label="Data">${formatarData(movimentacao.criadoEm)}</td>
+                    <td data-label="Tipo"><span class="selo-tipo ${classeTipoMovimentacao(movimentacao.tipo)}">${textoTipoMovimentacao(movimentacao.tipo)}</span></td>
+                    <td data-label="Produto"><strong>${escaparHTML(movimentacao.produtoNome)}</strong><span class="detalhe-celula">${saldo}</span></td>
+                    <td data-label="Quantidade">${formatarNumero(movimentacao.quantidade)} ${escaparHTML(movimentacao.unidade)}</td>
+                    <td data-label="Destino ou observacao">${escaparHTML(destino)}${movimentacao.observacao && filial ? `<span class="detalhe-celula">${escaparHTML(movimentacao.observacao)}</span>` : ""}</td>
                 </tr>
             `;
         }).join("")
@@ -1878,7 +1913,7 @@ function renderizarUsuarios() {
             const filial = usuario.filial_id ? (buscarFilial(usuario.filial_id)?.nome || usuario.filial_id) : "—";
             const papel = usuario.papel === "cd_admin" ? "Administrador" : "Filial";
             const podeExcluir = usuario.id !== usuarioAtual?.id;
-            return `<tr><td>${escaparHTML(usuario.nome || "Sem nome")}</td><td>${escaparHTML(loginParaExibicao(usuario.email))}</td><td><span class="selo-tipo ${usuario.papel === "cd_admin" ? "tipo-aprovado" : "tipo-pendente"}">${papel}</span></td><td>${escaparHTML(filial)}</td><td><div class="acoes-usuario"><button type="button" class="botao-acao" data-acao="editar-usuario" data-usuario-id="${usuario.id}">Editar</button>${podeExcluir ? `<button type="button" class="botao-acao" data-acao="excluir-usuario" data-usuario-id="${usuario.id}">Excluir</button>` : ""}</div></td></tr>`;
+            return `<tr><td data-label="Usuario">${escaparHTML(usuario.nome || "Sem nome")}</td><td data-label="Login">${escaparHTML(loginParaExibicao(usuario.email))}</td><td data-label="Papel"><span class="selo-tipo ${usuario.papel === "cd_admin" ? "tipo-aprovado" : "tipo-pendente"}">${papel}</span></td><td data-label="Filial">${escaparHTML(filial)}</td><td data-label="Acoes"><div class="acoes-usuario"><button type="button" class="botao-acao" data-acao="editar-usuario" data-usuario-id="${usuario.id}">Editar</button>${podeExcluir ? `<button type="button" class="botao-acao" data-acao="excluir-usuario" data-usuario-id="${usuario.id}">Excluir</button>` : ""}</div></td></tr>`;
         }).join("")
         : "<tr><td colspan=\"5\" class=\"tabela-vazia\">Nenhum usuário encontrado.</td></tr>";
 }
@@ -3093,6 +3128,45 @@ elementos.botaoRecolherMenu?.addEventListener("click", () => {
     }
 });
 
+elementos.botaoMenuMobile?.addEventListener("click", () => {
+    const aberto = !elementos.menuLateral.classList.contains("menu-mobile-aberto");
+    elementos.menuLateral.classList.toggle("menu-mobile-aberto", aberto);
+    elementos.botaoMenuMobile.setAttribute("aria-expanded", String(aberto));
+    fecharSeletorMobile();
+});
+
+elementos.botaoSeletorMobile?.addEventListener("click", () => {
+    const aberto = elementos.painelSeletorMobile.hidden;
+    elementos.painelSeletorMobile.hidden = !aberto;
+    elementos.botaoSeletorMobile.setAttribute("aria-expanded", String(aberto));
+    sincronizarSeletorPortalMobile();
+    fecharMenuMobile();
+    fecharPerfilMobile();
+});
+
+elementos.botaoPerfilMobile?.addEventListener("click", () => {
+    const aberto = elementos.painelPerfilMobile.hidden;
+    elementos.painelPerfilMobile.hidden = !aberto;
+    elementos.botaoPerfilMobile.setAttribute("aria-expanded", String(aberto));
+    fecharSeletorMobile();
+    fecharMenuMobile();
+});
+
+elementos.botaoAlterarSenhaMobile?.addEventListener("click", () => {
+    fecharPerfilMobile();
+    elementos.botaoAlterarSenha.click();
+});
+
+elementos.botaoSairMobile?.addEventListener("click", () => {
+    elementos.botaoSair.click();
+});
+
+elementos.seletorPortalMobile?.addEventListener("change", () => {
+    elementos.seletorPortal.value = elementos.seletorPortalMobile.value;
+    elementos.seletorPortal.dispatchEvent(new Event("change", { bubbles: true }));
+    fecharSeletorMobile();
+});
+
 document.addEventListener("click", (evento) => {
     const fechar = evento.target.closest("[data-fechar-modal]");
 
@@ -3108,6 +3182,9 @@ document.addEventListener("click", (evento) => {
     }
 
     if (!evento.target.closest("#menu-perfil")) fecharMenuPerfil();
+    if (!evento.target.closest(".cabecalho-mobile")) fecharSeletorMobile();
+    if (!evento.target.closest(".cabecalho-mobile")) fecharPerfilMobile();
+    if (!evento.target.closest(".menu-lateral") && !evento.target.closest("#botao-menu-mobile")) fecharMenuMobile();
 });
 
 elementos.listaAnalisarPedido?.addEventListener("click", (evento) => {
@@ -3126,6 +3203,9 @@ elementos.listaAnalisarPedido?.addEventListener("click", (evento) => {
 
 document.addEventListener("keydown", (evento) => {
     if (evento.key === "Escape") {
+        fecharMenuMobile();
+        fecharSeletorMobile();
+        fecharPerfilMobile();
         fecharModal(elementos.modalProduto);
         fecharModal(elementos.modalPedido);
         fecharModal(elementos.modalEntrega);

@@ -49,6 +49,39 @@
         </aside>
 
         <div class="conteudo">
+            <header class="cabecalho-mobile">
+                <button class="botao-cabecalho-mobile" type="button" id="botao-menu-mobile" aria-controls="menu-navegacao" aria-expanded="false" aria-label="Abrir menu de navegacao">
+                    <span class="icone icone-menu" aria-hidden="true"></span>
+                </button>
+                <img class="logo-mobile" src="./assets/img/therapeutica-logo-01.png" alt="Therapeutica Pharmacia">
+                <div class="acoes-cabecalho-mobile">
+                    <button class="botao-cabecalho-mobile" type="button" id="botao-seletor-mobile" aria-controls="painel-seletor-mobile" aria-expanded="false" aria-label="Selecionar centro de distribuicao ou filial">
+                        <span class="icone icone-filiais" aria-hidden="true"></span>
+                    </button>
+                    <button class="botao-cabecalho-mobile botao-perfil-mobile" type="button" id="botao-perfil-mobile" aria-controls="painel-perfil-mobile" aria-expanded="false" aria-label="Abrir menu do usuário">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path></svg>
+                    </button>
+                </div>
+                <div class="painel-seletor-mobile" id="painel-seletor-mobile" hidden>
+                    <label for="seletor-portal-mobile">Visualização
+                        <select id="seletor-portal-mobile">
+                            <option value="cd">Centro de Distribuição</option>
+                            <option value="blumenau">Filial Blumenau</option>
+                            <option value="lucas">Filial Lucas</option>
+                            <option value="sinop">Filial Sinop</option>
+                            <option value="matriz">Filial Sorriso - Indústria</option>
+                            <option value="sorriso-laboratorio">Filial Sorriso - Laboratório</option>
+                            <option value="sorriso-callcenter">Filial Sorriso - Callcenter</option>
+                            <option value="sorriso-atendimento">Filial Sorriso - Atendimento</option>
+                            <option value="sorriso-rh">Filial Sorriso - RH</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="painel-perfil-mobile" id="painel-perfil-mobile" role="menu" hidden>
+                    <button type="button" id="botao-alterar-senha-mobile" role="menuitem">Alterar senha</button>
+                    <button type="button" id="botao-sair-mobile" role="menuitem">Sair</button>
+                </div>
+            </header>
             <header class="cabecalho">
                 <div>
                     <p id="contexto-portal">Therapeutica Pharmacia · Centro de Distribuição</p>
