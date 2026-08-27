@@ -25,6 +25,7 @@
                     <button class="item-menu" data-pagina="pedidos"><span class="icone icone-pedidos" aria-hidden="true"></span><span>Pedidos das filiais</span><span class="notificacao-pedidos" id="notificacao-pedidos" hidden aria-label="Nenhum pedido pendente">0</span></button>
                     <button class="item-menu" data-pagina="filiais"><span class="icone icone-filiais" aria-hidden="true"></span><span>Filiais</span></button>
                     <button class="item-menu" data-pagina="historico"><span class="icone icone-historico" aria-hidden="true"></span><span>Histórico</span></button>
+                    <button class="item-menu" data-pagina="relatorios"><span class="icone icone-relatorios" aria-hidden="true"></span><span>Relatórios</span></button>
                     <button class="item-menu" data-pagina="usuarios"><span class="icone icone-usuarios" aria-hidden="true"></span><span>Usuários</span></button>
                     <button class="item-menu" type="button" id="botao-configuracoes" aria-expanded="false"><span class="icone icone-config" aria-hidden="true"></span><span>Configurações</span></button>
                     <div class="submenu-configuracoes" id="submenu-configuracoes" hidden>
@@ -487,6 +488,61 @@
                                     </tr>
                                 </thead>
                                 <tbody id="tabela-historico"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </section>
+
+                <section class="pagina" id="pagina-relatorios">
+                    <div class="cabecalho-secao">
+                        <div>
+                            <p class="subtitulo-secao">Visão gerencial do CD</p>
+                            <h2>Relatórios</h2>
+                            <p>Analise solicitações, distribuições e consumo estimado das filiais.</p>
+                        </div>
+                    </div>
+                    <section class="filtros filtros-relatorios" aria-label="Filtros dos relatórios">
+                        <label>Relatório
+                            <select id="relatorio-tipo">
+                                <option value="movimentacao_filial">Movimentação por filial</option>
+                                <option value="quantidade_distribuida">Quantidade distribuída por filial</option>
+                                <option value="itens_distribuidos">Itens mais distribuídos</option>
+                                <option value="itens_solicitados">Itens mais solicitados</option>
+                                <option value="consumo_periodo">Consumo estimado por período</option>
+                                <option value="media_consumo">Média de consumo por filial</option>
+                                <option value="comparativo_filiais">Comparativo entre filiais</option>
+                                <option value="historico_item">Histórico por item</option>
+                                <option value="historico_filial">Histórico por filial</option>
+                            </select>
+                        </label>
+                        <label>Período
+                            <select id="relatorio-periodo">
+                                <option value="mes_atual">Mês atual</option>
+                                <option value="hoje">Hoje</option>
+                                <option value="ultimos_30_dias">Últimos 30 dias</option>
+                                <option value="personalizado">Intervalo personalizado</option>
+                            </select>
+                        </label>
+                        <label>Data inicial
+                            <input type="date" id="relatorio-data-inicial">
+                        </label>
+                        <label>Data final
+                            <input type="date" id="relatorio-data-final">
+                        </label>
+                        <label>Filial
+                            <select id="relatorio-filial"><option value="">Todas as filiais</option></select>
+                        </label>
+                        <label>Produto
+                            <select id="relatorio-produto"><option value="">Todos os produtos</option></select>
+                        </label>
+                    </section>
+                    <p class="descricao-relatorio" id="relatorio-descricao"></p>
+                    <section class="grade-metricas-relatorio" id="relatorio-metricas"></section>
+                    <section class="tabela-container">
+                        <div class="tabela-responsiva">
+                            <table>
+                                <thead id="relatorio-cabecalho"></thead>
+                                <tbody id="relatorio-tabela"></tbody>
                             </table>
                         </div>
                     </section>

@@ -52,6 +52,7 @@ const titulosPaginas = {
     "meus-pedidos": "Meus pedidos",
     filiais: "Filiais",
     historico: "Histórico",
+    relatorios: "Relatórios",
     usuarios: "Usuários",
     "configuracoes-cadastros": "Cadastros do estoque",
     "configuracoes-backup": "Dados e backup"
@@ -96,6 +97,16 @@ const elementos = {
     buscaHistorico: document.querySelector("#busca-historico"),
     filtroHistorico: document.querySelector("#filtro-historico"),
     tabelaHistorico: document.querySelector("#tabela-historico"),
+    relatorioTipo: document.querySelector("#relatorio-tipo"),
+    relatorioPeriodo: document.querySelector("#relatorio-periodo"),
+    relatorioDataInicial: document.querySelector("#relatorio-data-inicial"),
+    relatorioDataFinal: document.querySelector("#relatorio-data-final"),
+    relatorioFilial: document.querySelector("#relatorio-filial"),
+    relatorioProduto: document.querySelector("#relatorio-produto"),
+    relatorioDescricao: document.querySelector("#relatorio-descricao"),
+    relatorioMetricas: document.querySelector("#relatorio-metricas"),
+    relatorioCabecalho: document.querySelector("#relatorio-cabecalho"),
+    relatorioTabela: document.querySelector("#relatorio-tabela"),
     tabelaUsuarios: document.querySelector("#tabela-usuarios"),
     movimentoTitulo: document.querySelector("#movimentacao-titulo"),
     movimentoSubtitulo: document.querySelector("#movimentacao-subtitulo"),
@@ -1909,6 +1920,162 @@ function renderizarHistorico() {
         : "<tr><td colspan=\"5\" class=\"tabela-vazia\">Nenhuma movimentação encontrada.</td></tr>";
 }
 
+function dataParaCampo(data) {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, "0");
+    const dia = String(data.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+}
+
+function configurarPeriodoRelatorio() {
+    const hoje = new Date();
+    const periodo = elementos.relatorioPeriodo.value;
+    let inicio = new Date(hoje);
+    let fim = new Date(hoje);
+    if (periodo === "mes_atual") inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+    if (periodo === "ultimos_30_dias") inicio.setDate(inicio.getDate() - 29);
+    const personalizado = periodo === "personalizado";
+    elementos.relatorioDataInicial.disabled = !personalizado;
+    elementos.relatorioDataFinal.disabled = !personalizado;
+    if (!personalizado) {
+        elementos.relatorioDataInicial.value = dataParaCampo(inicio);
+        elementos.relatorioDataFinal.value = dataParaCampo(fim);
+    }
+}
+
+function preencherFiltrosRelatorios() {
+    const filialSelecionada = elementos.relatorioFilial.value;
+    const produtoSelecionado = elementos.relatorioProduto.value;
+    elementos.relatorioFilial.innerHTML = `<option value="">Todas as filiais</option>${estado.filiais.map((filial) => `<option value="${filial.id}">${escaparHTML(filial.nome)}</option>`).join("")}`;
+    elementos.relatorioProduto.innerHTML = `<option value="">Todos os produtos</option>${produtosAtivos().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")).map((produto) => `<option value="${produto.id}">${escaparHTML(produto.nome)}</option>`).join("")}`;
+    if (estado.filiais.some((filial) => filial.id === filialSelecionada)) elementos.relatorioFilial.value = filialSelecionada;
+    if (produtosAtivos().some((produto) => produto.id === produtoSelecionado)) elementos.relatorioProduto.value = produtoSelecionado;
+}
+
+function dataEstaNoPeriodo(data, inicio, fim) {
+    const valor = new Date(data).getTime();
+    const inicioPeriodo = inicio ? new Date(`${inicio}T00:00:00`).getTime() : -Infinity;
+    const fimPeriodo = fim ? new Date(`${fim}T23:59:59.999`).getTime() : Infinity;
+    return Number.isFinite(valor) && valor >= inicioPeriodo && valor <= fimPeriodo;
+}
+
+function filtrosDoRelatorio() {
+    const filialId = elementos.relatorioFilial.value;
+    const produtoId = String(elementos.relatorioProduto.value || "");
+    const produtoSelecionado = produtoId ? buscarProduto(produtoId) : null;
+    const correspondeProduto = (produtoDoRegistro) => !produtoId
+        || String(produtoDoRegistro?.produtoId) === produtoId
+        || (produtoSelecionado && textoNormalizado(produtoDoRegistro?.produtoNome) === textoNormalizado(produtoSelecionado.nome));
+    const inicio = elementos.relatorioDataInicial.value;
+    const fim = elementos.relatorioDataFinal.value;
+    const movimentos = estado.movimentacoes.filter((movimento) =>
+        dataEstaNoPeriodo(movimento.criadoEm, inicio, fim)
+        && (!filialId || movimento.filialId === filialId)
+        && correspondeProduto(movimento)
+    );
+    const itensSolicitados = estado.pedidos.flatMap((pedido) => itensDoPedido(pedido).map((item) => ({ ...item, pedido }))).filter(({ item, pedido }) =>
+        dataEstaNoPeriodo(pedido.criadoEm, inicio, fim)
+        && (!filialId || pedido.filialId === filialId)
+        && correspondeProduto(item)
+    );
+    return { filialId, produtoId, inicio, fim, movimentos, itensSolicitados };
+}
+
+function somarPor(registros, chave, quantidade) {
+    const acumulado = new Map();
+    registros.forEach((registro) => {
+        const dados = chave(registro);
+        const id = JSON.stringify(dados);
+        const atual = acumulado.get(id) || { ...dados, quantidade: 0 };
+        atual.quantidade += quantidade(registro);
+        acumulado.set(id, atual);
+    });
+    return [...acumulado.values()].sort((a, b) => b.quantidade - a.quantidade);
+}
+
+function formatarDataRelatorio(data) {
+    return new Intl.DateTimeFormat("pt-BR").format(new Date(data));
+}
+
+function renderizarTabelaRelatorio(colunas, linhas) {
+    elementos.relatorioCabecalho.innerHTML = `<tr>${colunas.map((coluna) => `<th>${coluna}</th>`).join("")}</tr>`;
+    elementos.relatorioTabela.innerHTML = linhas.length
+        ? linhas.join("")
+        : `<tr><td colspan="${colunas.length}" class="tabela-vazia">Nenhum dado encontrado para os filtros selecionados.</td></tr>`;
+}
+
+function renderizarMetricasRelatorio(metricas) {
+    elementos.relatorioMetricas.innerHTML = metricas.map(({ rotulo, valor, apoio }) => `
+        <article class="metrica-relatorio"><span>${escaparHTML(rotulo)}</span><strong>${escaparHTML(valor)}</strong>${apoio ? `<small>${escaparHTML(apoio)}</small>` : ""}</article>
+    `).join("");
+}
+
+function renderizarRelatorios(atualizarOpcoes = true) {
+    if (!elementos.relatorioTipo || !usuarioEhCD()) return;
+    if (atualizarOpcoes) preencherFiltrosRelatorios();
+    const tipo = elementos.relatorioTipo.value;
+    const { filialId, produtoId, movimentos, itensSolicitados, inicio, fim } = filtrosDoRelatorio();
+    const movimentacoesFiliais = movimentos.filter((movimento) => movimento.filialId);
+    const distribuicoes = movimentos.filter((movimento) => movimento.tipo === "transferencia" && movimento.filialId);
+    const nomeFilial = (id) => buscarFilial(id)?.nome || "Filial não identificada";
+    const nomeProduto = (id, alternativa = "Produto não identificado") => buscarProduto(id)?.nome || alternativa;
+    const quantidadeTotal = (itens) => itens.reduce((total, item) => total + Number(item.quantidade || item.quantidadeSolicitada || 0), 0);
+    const descricaoPeriodo = inicio && fim ? `${formatarDataRelatorio(`${inicio}T12:00:00`)} a ${formatarDataRelatorio(`${fim}T12:00:00`)}` : "todo o período disponível";
+    const configuracoes = {
+        movimentacao_filial: () => ({
+            descricao: `Movimentações vinculadas às filiais em ${descricaoPeriodo}.`,
+            metricas: [{ rotulo: "Movimentações", valor: String(movimentacoesFiliais.length) }, { rotulo: "Quantidade", valor: formatarNumero(quantidadeTotal(movimentacoesFiliais)) }],
+            colunas: ["Data", "Filial", "Produto", "Tipo", "Quantidade"],
+            linhas: movimentacoesFiliais.map((movimento) => `<tr><td>${formatarDataRelatorio(movimento.criadoEm)}</td><td>${escaparHTML(nomeFilial(movimento.filialId))}</td><td>${escaparHTML(movimento.produtoNome)}</td><td>${escaparHTML(textoTipoMovimentacao(movimento.tipo))}</td><td>${formatarNumero(movimento.quantidade)} ${escaparHTML(movimento.unidade)}</td></tr>`)
+        }),
+        quantidade_distribuida: () => {
+            const linhas = somarPor(distribuicoes, (movimento) => ({ filialId: movimento.filialId }), (movimento) => movimento.quantidade);
+            return { descricao: `Quantidade distribuída pelo CD em ${descricaoPeriodo}.`, metricas: [{ rotulo: "Distribuído", valor: formatarNumero(quantidadeTotal(distribuicoes)) }, { rotulo: "Filiais atendidas", valor: String(linhas.length) }], colunas: ["Filial", "Quantidade distribuída"], linhas: linhas.map((linha) => `<tr><td>${escaparHTML(nomeFilial(linha.filialId))}</td><td>${formatarNumero(linha.quantidade)}</td></tr>`) };
+        },
+        itens_distribuidos: () => {
+            const linhas = somarPor(distribuicoes, (movimento) => ({ produtoId: movimento.produtoId, unidade: movimento.unidade, nome: movimento.produtoNome }), (movimento) => movimento.quantidade);
+            return { descricao: `Ranking de itens mais distribuídos em ${descricaoPeriodo}.`, metricas: [{ rotulo: "Distribuído", valor: formatarNumero(quantidadeTotal(distribuicoes)) }, { rotulo: "Produtos", valor: String(linhas.length) }], colunas: ["Posição", "Produto", "Quantidade"], linhas: linhas.map((linha, indice) => `<tr><td>${indice + 1}º</td><td>${escaparHTML(linha.nome || nomeProduto(linha.produtoId))}</td><td>${formatarNumero(linha.quantidade)} ${escaparHTML(linha.unidade || "Unidade")}</td></tr>`) };
+        },
+        itens_solicitados: () => {
+            const linhas = somarPor(itensSolicitados, ({ item }) => ({ produtoId: item.produtoId, unidade: item.unidade, nome: item.produtoNome }), ({ item }) => item.quantidadeSolicitada);
+            return { descricao: `Ranking de itens solicitados pelas filiais em ${descricaoPeriodo}.`, metricas: [{ rotulo: "Solicitado", valor: formatarNumero(itensSolicitados.reduce((total, { item }) => total + item.quantidadeSolicitada, 0)) }, { rotulo: "Produtos", valor: String(linhas.length) }], colunas: ["Posição", "Produto", "Quantidade solicitada"], linhas: linhas.map((linha, indice) => `<tr><td>${indice + 1}º</td><td>${escaparHTML(linha.nome || nomeProduto(linha.produtoId))}</td><td>${formatarNumero(linha.quantidade)} ${escaparHTML(linha.unidade || "Unidade")}</td></tr>`) };
+        },
+        consumo_periodo: () => {
+            const linhas = somarPor(distribuicoes, (movimento) => ({ produtoId: movimento.produtoId, unidade: movimento.unidade, nome: movimento.produtoNome }), (movimento) => movimento.quantidade);
+            return { descricao: `Consumo estimado com base no que foi distribuído/recebido em ${descricaoPeriodo}.`, metricas: [{ rotulo: "Consumo estimado", valor: formatarNumero(quantidadeTotal(distribuicoes)) }, { rotulo: "Produtos", valor: String(linhas.length) }], colunas: ["Produto", "Quantidade recebida"], linhas: linhas.map((linha) => `<tr><td>${escaparHTML(linha.nome || nomeProduto(linha.produtoId))}</td><td>${formatarNumero(linha.quantidade)} ${escaparHTML(linha.unidade || "Unidade")}</td></tr>`) };
+        },
+        media_consumo: () => {
+            const meses = Math.max(1, ((new Date(`${fim || dataParaCampo(new Date())}T12:00:00`).getFullYear() - new Date(`${inicio || dataParaCampo(new Date())}T12:00:00`).getFullYear()) * 12) + new Date(`${fim || dataParaCampo(new Date())}T12:00:00`).getMonth() - new Date(`${inicio || dataParaCampo(new Date())}T12:00:00`).getMonth() + 1);
+            const linhas = somarPor(distribuicoes, (movimento) => ({ filialId: movimento.filialId, produtoId: movimento.produtoId, unidade: movimento.unidade, nome: movimento.produtoNome }), (movimento) => movimento.quantidade);
+            return { descricao: `Média estimada de recebimento por filial em ${descricaoPeriodo}.`, metricas: [{ rotulo: "Meses considerados", valor: String(meses) }, { rotulo: "Registros", valor: String(linhas.length) }], colunas: ["Filial", "Produto", "Média"], linhas: linhas.map((linha) => `<tr><td>${escaparHTML(nomeFilial(linha.filialId))}</td><td>${escaparHTML(linha.nome || nomeProduto(linha.produtoId))}</td><td>${formatarNumero(linha.quantidade / meses)} ${escaparHTML(linha.unidade || "Unidade")}</td></tr>`) };
+        },
+        comparativo_filiais: () => {
+            const linhas = somarPor(distribuicoes, (movimento) => ({ filialId: movimento.filialId }), (movimento) => movimento.quantidade);
+            return { descricao: `Comparativo de distribuição/consumo estimado entre filiais em ${descricaoPeriodo}.`, metricas: [{ rotulo: "Distribuído", valor: formatarNumero(quantidadeTotal(distribuicoes)) }, { rotulo: "Filiais", valor: String(linhas.length) }], colunas: ["Posição", "Filial", "Quantidade recebida"], linhas: linhas.map((linha, indice) => `<tr><td>${indice + 1}º</td><td>${escaparHTML(nomeFilial(linha.filialId))}</td><td>${formatarNumero(linha.quantidade)}</td></tr>`) };
+        },
+        historico_item: () => ({
+            descricao: "Histórico de distribuição por produto. Selecione um produto para uma consulta específica.",
+            metricas: [{ rotulo: "Distribuições", valor: String(distribuicoes.length) }, { rotulo: "Quantidade", valor: formatarNumero(quantidadeTotal(distribuicoes)) }],
+            colunas: ["Data", "Produto", "Filial", "Quantidade"],
+            linhas: distribuicoes.map((movimento) => `<tr><td>${formatarDataRelatorio(movimento.criadoEm)}</td><td>${escaparHTML(movimento.produtoNome)}</td><td>${escaparHTML(nomeFilial(movimento.filialId))}</td><td>${formatarNumero(movimento.quantidade)} ${escaparHTML(movimento.unidade)}</td></tr>`)
+        }),
+        historico_filial: () => ({
+            descricao: "Histórico de produtos recebidos pelas filiais. Selecione uma filial para uma consulta específica.",
+            metricas: [{ rotulo: "Distribuições", valor: String(distribuicoes.length) }, { rotulo: "Quantidade", valor: formatarNumero(quantidadeTotal(distribuicoes)) }],
+            colunas: ["Data", "Filial", "Produto", "Quantidade"],
+            linhas: distribuicoes.map((movimento) => `<tr><td>${formatarDataRelatorio(movimento.criadoEm)}</td><td>${escaparHTML(nomeFilial(movimento.filialId))}</td><td>${escaparHTML(movimento.produtoNome)}</td><td>${formatarNumero(movimento.quantidade)} ${escaparHTML(movimento.unidade)}</td></tr>`)
+        })
+    };
+    const resultado = configuracoes[tipo]();
+    const filtrosAtivos = [
+        filialId ? `Filial: ${nomeFilial(filialId)}` : "Todas as filiais",
+        produtoId ? `Produto: ${nomeProduto(produtoId)}` : "Todos os produtos"
+    ].join(" · ");
+    elementos.relatorioDescricao.textContent = `${resultado.descricao} Filtros: ${filtrosAtivos}.`;
+    renderizarMetricasRelatorio(resultado.metricas);
+    renderizarTabelaRelatorio(resultado.colunas, resultado.linhas);
+}
+
 function renderizarUsuarios() {
     if (!elementos.tabelaUsuarios) return;
     elementos.tabelaUsuarios.innerHTML = usuarios.length
@@ -2021,6 +2188,7 @@ function renderizarTudo() {
     renderizarNotificacaoPedidos();
     renderizarFiliais();
     renderizarHistorico();
+    renderizarRelatorios();
     renderizarUsuarios();
     renderizarPortalFilial();
     if (pedidoEmAnaliseId && elementos.modalAnalisarPedido.classList.contains("modal-aberto")) {
@@ -3717,6 +3885,24 @@ elementos.formularioUnidade?.addEventListener("submit", async (evento) => {
     await criarUnidade(elementos.unidadeNome.value);
 });
 elementos.botaoDadosDemo?.addEventListener("click", carregarDadosDemo);
+
+elementos.relatorioPeriodo?.addEventListener("change", () => {
+    configurarPeriodoRelatorio();
+    renderizarRelatorios(false);
+});
+
+[
+    elementos.relatorioTipo,
+    elementos.relatorioDataInicial,
+    elementos.relatorioDataFinal,
+    elementos.relatorioFilial
+].forEach((campo) => campo?.addEventListener("change", () => renderizarRelatorios(false)));
+
+const atualizarPorProdutoDoRelatorio = () => renderizarRelatorios(false);
+elementos.relatorioProduto?.addEventListener("change", atualizarPorProdutoDoRelatorio);
+elementos.relatorioProduto?.addEventListener("input", atualizarPorProdutoDoRelatorio);
+
+configurarPeriodoRelatorio();
 
 elementos.seletorPortal.value = portalAtual;
 navegar("dashboard");
