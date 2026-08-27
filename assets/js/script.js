@@ -107,6 +107,7 @@ const elementos = {
     relatorioMetricas: document.querySelector("#relatorio-metricas"),
     relatorioCabecalho: document.querySelector("#relatorio-cabecalho"),
     relatorioTabela: document.querySelector("#relatorio-tabela"),
+    botaoGerarPdfRelatorio: document.querySelector("#botao-gerar-pdf-relatorio"),
     tabelaUsuarios: document.querySelector("#tabela-usuarios"),
     movimentoTitulo: document.querySelector("#movimentacao-titulo"),
     movimentoSubtitulo: document.querySelector("#movimentacao-subtitulo"),
@@ -2076,6 +2077,64 @@ function renderizarRelatorios(atualizarOpcoes = true) {
     renderizarTabelaRelatorio(resultado.colunas, resultado.linhas);
 }
 
+function gerarPdfRelatorio() {
+    if (!usuarioEhCD()) return;
+
+    renderizarRelatorios(false);
+    const nomeRelatorio = elementos.relatorioTipo.selectedOptions[0]?.textContent?.trim() || "Relatório";
+    const geradoEm = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date());
+    const indicadores = [...elementos.relatorioMetricas.querySelectorAll(".metrica-relatorio")].map((indicador) => `
+        <article class="metrica">${indicador.innerHTML}</article>
+    `).join("");
+    const tabela = `<table><thead>${elementos.relatorioCabecalho.innerHTML}</thead><tbody>${elementos.relatorioTabela.innerHTML}</tbody></table>`;
+    const janela = window.open("", "_blank", "width=1100,height=800");
+
+    if (!janela) {
+        notificar("O navegador bloqueou a janela de impressão. Permita pop-ups e tente novamente.", "erro");
+        return;
+    }
+
+    janela.document.open();
+    janela.document.write(`<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${escaparHTML(nomeRelatorio)} · Therapeutica</title>
+    <style>
+        @page { margin: 16mm; }
+        * { box-sizing: border-box; }
+        body { margin: 0; color: #392520; font-family: Arial, sans-serif; font-size: 12px; }
+        header { padding-bottom: 16px; margin-bottom: 18px; border-bottom: 2px solid #e97762; }
+        h1 { margin: 0 0 6px; font-size: 24px; }
+        p { margin: 5px 0; color: #765f58; line-height: 1.45; }
+        .grade-metricas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 18px 0; }
+        .metrica { min-height: 82px; padding: 12px; border: 1px solid #ead5ce; border-radius: 8px; }
+        .metrica span, .metrica small { display: block; color: #765f58; font-size: 10px; }
+        .metrica span { margin-bottom: 7px; font-weight: 700; text-transform: uppercase; }
+        .metrica strong { display: block; margin-bottom: 4px; font-size: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 9px 8px; border-bottom: 1px solid #ead5ce; text-align: left; vertical-align: top; }
+        th { color: #765f58; background: #fff6f2; font-size: 10px; text-transform: uppercase; }
+        .tabela-vazia { padding: 25px; color: #765f58; text-align: center; }
+        @media print { .grade-metricas { grid-template-columns: repeat(4, 1fr); } }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>${escaparHTML(nomeRelatorio)}</h1>
+        <p>${escaparHTML(elementos.relatorioDescricao.textContent)}</p>
+        <p>Gerado em: ${escaparHTML(geradoEm)}</p>
+    </header>
+    <section class="grade-metricas">${indicadores}</section>
+    ${tabela}
+</body>
+</html>`);
+    janela.document.close();
+    janela.focus();
+    window.setTimeout(() => janela.print(), 250);
+}
+
 function renderizarUsuarios() {
     if (!elementos.tabelaUsuarios) return;
     elementos.tabelaUsuarios.innerHTML = usuarios.length
@@ -3885,6 +3944,7 @@ elementos.formularioUnidade?.addEventListener("submit", async (evento) => {
     await criarUnidade(elementos.unidadeNome.value);
 });
 elementos.botaoDadosDemo?.addEventListener("click", carregarDadosDemo);
+elementos.botaoGerarPdfRelatorio?.addEventListener("click", gerarPdfRelatorio);
 
 elementos.relatorioPeriodo?.addEventListener("change", () => {
     configurarPeriodoRelatorio();
