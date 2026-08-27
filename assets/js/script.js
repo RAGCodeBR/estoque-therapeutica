@@ -2087,15 +2087,10 @@ function gerarPdfRelatorio() {
         <article class="metrica">${indicador.innerHTML}</article>
     `).join("");
     const tabela = `<table><thead>${elementos.relatorioCabecalho.innerHTML}</thead><tbody>${elementos.relatorioTabela.innerHTML}</tbody></table>`;
-    const janela = window.open("", "_blank", "width=1100,height=800");
-
-    if (!janela) {
-        notificar("O navegador bloqueou a janela de impressão. Permita pop-ups e tente novamente.", "erro");
-        return;
-    }
-
-    janela.document.open();
-    janela.document.write(`<!doctype html>
+    const quadroImpressao = document.createElement("iframe");
+    quadroImpressao.setAttribute("aria-hidden", "true");
+    quadroImpressao.style.cssText = "position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none;";
+    quadroImpressao.srcdoc = `<!doctype html>
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
@@ -2129,10 +2124,19 @@ function gerarPdfRelatorio() {
     <section class="grade-metricas">${indicadores}</section>
     ${tabela}
 </body>
-</html>`);
-    janela.document.close();
-    janela.focus();
-    window.setTimeout(() => janela.print(), 250);
+</html>`;
+    quadroImpressao.addEventListener("load", () => {
+        const janelaImpressao = quadroImpressao.contentWindow;
+        if (!janelaImpressao) {
+            quadroImpressao.remove();
+            notificar("Não foi possível preparar a impressão do relatório.", "erro");
+            return;
+        }
+        janelaImpressao.addEventListener("afterprint", () => quadroImpressao.remove(), { once: true });
+        janelaImpressao.focus();
+        window.setTimeout(() => janelaImpressao.print(), 250);
+    }, { once: true });
+    document.body.appendChild(quadroImpressao);
 }
 
 function renderizarUsuarios() {
